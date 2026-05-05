@@ -7,8 +7,7 @@
   <meta name="description" content="Connect your Solana wallet and discover how much you could have made if you held your meme coins longer." />
   <link rel="stylesheet" href="style.css" />
   <script>
-    // Inject environment variables safely
-    window.ENV_HELIUS_API_KEY = '__HELIUS_API_KEY__';
+    window.ENV_HELIUS_API_KEY = '35969944-0121-4b82-a105-e622adfe38b8';
   </script>
 </head>
 <body>
@@ -28,7 +27,6 @@
 
 <div class="container">
 
-  <!-- Connect Section -->
   <section id="connect-section">
     <div class="hero-badge">✦ Solana Meme Coin Analyzer</div>
     <h1 class="hero-title">
@@ -42,16 +40,14 @@
     <div id="error-msg" class="hidden"></div>
 
     <div class="wallet-buttons">
-      <button class="wallet-btn" onclick="connectWallet()">
+      <button class="wallet-btn" id="phantom-btn">
         <img src="https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png"
-             onerror="this.style.display='none'"
-             alt="Phantom" />
+             onerror="this.style.display='none'" alt="Phantom" />
         Connect Phantom
       </button>
-      <button class="wallet-btn" onclick="connectSolflare()">
+      <button class="wallet-btn" id="solflare-btn">
         <img src="https://solflare.com/favicon.ico"
-             onerror="this.style.display='none'"
-             alt="Solflare" />
+             onerror="this.style.display='none'" alt="Solflare" />
         Connect Solflare
       </button>
     </div>
@@ -64,16 +60,12 @@
     </div>
   </section>
 
-  <!-- App Section (shown after wallet connect) -->
   <section id="app-section" class="hidden">
-
-    <!-- Loading -->
     <div id="loading-section">
       <div class="loader"></div>
       <div id="loading-text">Connecting...</div>
     </div>
 
-    <!-- Results -->
     <div id="results-section" class="hidden">
       <div class="stats-bar">
         <div class="stat-box">
@@ -89,27 +81,23 @@
           <div class="stat-box-value" id="total-whatif">—</div>
         </div>
       </div>
-
       <div class="section-title">Your Meme Coin History</div>
       <div id="coins-list"></div>
     </div>
-
   </section>
 
 </div>
 
 <script src="app.js"></script>
 <script>
-  // Show nav wallet info when connected
-  const origOnConnected = window.onWalletConnected;
-  document.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('load', () => {
+    document.getElementById('phantom-btn').addEventListener('click', connectWallet);
+    document.getElementById('solflare-btn').addEventListener('click', connectSolflare);
+
     const appSection = document.getElementById('app-section');
     const observer = new MutationObserver(() => {
-      if (!appSection.classList.contains('hidden')) {
-        document.getElementById('nav-wallet').classList.remove('hidden');
-      } else {
-        document.getElementById('nav-wallet').classList.add('hidden');
-      }
+      const hidden = appSection.classList.contains('hidden');
+      document.getElementById('nav-wallet').classList.toggle('hidden', hidden);
     });
     observer.observe(appSection, { attributes: true });
   });
