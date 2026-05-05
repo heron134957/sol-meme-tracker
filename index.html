@@ -12,95 +12,296 @@
 </head>
 <body>
 
+<!-- ── NAV ── -->
 <nav>
-  <div class="container" style="display:flex;align-items:center;justify-content:space-between;width:100%">
-    <div class="logo">Meme<span>Scope</span></div>
-    <div id="nav-wallet" class="hidden">
-      <div class="wallet-pill">
-        <div class="wallet-dot"></div>
-        <span id="wallet-address"></span>
-        <button class="disconnect-btn" onclick="disconnectWallet()">Disconnect</button>
+  <div class="container">
+    <div class="nav-inner">
+      <div class="logo">
+        <div class="logo-icon">◈</div>
+        Meme<span>Scope</span>
+      </div>
+      <div class="nav-right">
+        <div id="nav-wallet" class="hidden">
+          <div class="wallet-pill">
+            <div class="wallet-dot"></div>
+            <span id="wallet-address"></span>
+            <button class="disconnect-btn" id="disconnect-btn">Disconnect</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </nav>
 
+<!-- ── WALLET MODAL ── -->
+<div class="modal-overlay hidden" id="wallet-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Connect Wallet</div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <p class="modal-sub">Select your wallet to connect to MemeScope</p>
+
+    <div class="wallet-list" id="wallet-list">
+      <!-- Injected by JS -->
+    </div>
+
+    <div class="modal-footer">
+      🔒 Read-only access · No private keys required · Your funds stay safe
+    </div>
+  </div>
+</div>
+
 <div class="container">
 
+  <!-- ── CONNECT SECTION ── -->
   <section id="connect-section">
-    <div class="hero-badge">✦ Solana Meme Coin Analyzer</div>
+
+    <div class="hero-eyebrow">
+      <div class="hero-eyebrow-dot"></div>
+      Solana Meme Coin Analyzer
+    </div>
+
     <h1 class="hero-title">
       What if you<br/>
-      <span class="highlight">held longer?</span>
+      <em>held longer?</em>
+      <span class="line2">Find out now.</span>
     </h1>
+
     <p class="hero-sub">
-      Connect your Solana wallet to analyze your meme coin trade history and see exactly how much you left on the table.
+      Connect your Solana wallet to analyze your full meme coin trade history and see exactly how much you left on the table — or gained.
     </p>
 
     <div id="error-msg" class="hidden"></div>
 
-    <div class="wallet-buttons">
-      <button class="wallet-btn" id="phantom-btn">
-        <img src="https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png"
-             onerror="this.style.display='none'" alt="Phantom" />
-        Connect Phantom
-      </button>
-      <button class="wallet-btn" id="solflare-btn">
-        <img src="https://solflare.com/favicon.ico"
-             onerror="this.style.display='none'" alt="Solflare" />
-        Connect Solflare
-      </button>
+    <button class="connect-btn-primary" id="open-wallet-modal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="5" width="20" height="14" rx="2"/>
+        <path d="M16 12h.01"/>
+      </svg>
+      Connect Wallet
+    </button>
+
+    <div class="stats-strip">
+      <div class="strip-item">
+        <div class="strip-label">Wallets Supported</div>
+        <div class="strip-value blue">All</div>
+      </div>
+      <div class="strip-item">
+        <div class="strip-label">Data Source</div>
+        <div class="strip-value">On-chain</div>
+      </div>
+      <div class="strip-item">
+        <div class="strip-label">Cost</div>
+        <div class="strip-value green">Free</div>
+      </div>
     </div>
 
-    <div class="features">
-      <div class="feature"><div class="feature-dot"></div>Non-custodial</div>
-      <div class="feature"><div class="feature-dot"></div>Read-only analysis</div>
-      <div class="feature"><div class="feature-dot"></div>No private keys needed</div>
-      <div class="feature"><div class="feature-dot"></div>Results cached 24h</div>
+    <div class="features-row">
+      <div class="feature-chip"><div class="feature-check">✓</div>Non-custodial</div>
+      <div class="feature-chip"><div class="feature-check">✓</div>Read-only analysis</div>
+      <div class="feature-chip"><div class="feature-check">✓</div>No private keys needed</div>
+      <div class="feature-chip"><div class="feature-check">✓</div>Results cached 24h</div>
+      <div class="feature-chip"><div class="feature-check">✓</div>All Solana wallets</div>
     </div>
+
   </section>
 
+  <!-- ── APP SECTION ── -->
   <section id="app-section" class="hidden">
+
     <div id="loading-section">
-      <div class="loader"></div>
+      <div class="loader-ring"></div>
       <div id="loading-text">Connecting...</div>
+      <div class="loading-sub">This may take a moment for large wallets</div>
     </div>
 
     <div id="results-section" class="hidden">
       <div class="stats-bar">
         <div class="stat-box">
           <div class="stat-box-label">Meme Coins Traded</div>
-          <div class="stat-box-value" id="total-coins">—</div>
+          <div class="stat-box-value blue" id="total-coins">—</div>
+          <div class="stat-box-sub">Unique tokens found</div>
         </div>
         <div class="stat-box">
           <div class="stat-box-label">Still Holding</div>
           <div class="stat-box-value" id="still-holding">—</div>
+          <div class="stat-box-sub">Active positions</div>
         </div>
         <div class="stat-box">
           <div class="stat-box-label">Total "What If" Value</div>
-          <div class="stat-box-value" id="total-whatif">—</div>
+          <div class="stat-box-value green" id="total-whatif">—</div>
+          <div class="stat-box-sub">If held until today</div>
         </div>
       </div>
-      <div class="section-title">Your Meme Coin History</div>
+
+      <div class="section-label">Your Meme Coin History</div>
       <div id="coins-list"></div>
     </div>
+
   </section>
 
 </div>
 
 <script src="app.js"></script>
 <script>
-  window.addEventListener('load', () => {
-    document.getElementById('phantom-btn').addEventListener('click', connectWallet);
-    document.getElementById('solflare-btn').addEventListener('click', connectSolflare);
+window.addEventListener('load', () => {
 
-    const appSection = document.getElementById('app-section');
-    const observer = new MutationObserver(() => {
-      const hidden = appSection.classList.contains('hidden');
-      document.getElementById('nav-wallet').classList.toggle('hidden', hidden);
-    });
-    observer.observe(appSection, { attributes: true });
+  // ── Wallet definitions ──
+  const WALLETS = [
+    {
+      id: 'phantom',
+      name: 'Phantom',
+      icon: 'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png',
+      detect: () => window.solana?.isPhantom,
+      connect: async () => {
+        const res = await window.solana.connect();
+        return res.publicKey.toString();
+      },
+      disconnect: async () => { try { await window.solana.disconnect(); } catch(_){} }
+    },
+    {
+      id: 'solflare',
+      name: 'Solflare',
+      icon: 'https://solflare.com/favicon.ico',
+      detect: () => !!window.solflare,
+      connect: async () => {
+        await window.solflare.connect();
+        return window.solflare.publicKey.toString();
+      },
+      disconnect: async () => { try { await window.solflare.disconnect(); } catch(_){} }
+    },
+    {
+      id: 'backpack',
+      name: 'Backpack',
+      icon: 'https://backpack.app/favicon.ico',
+      detect: () => !!window.backpack,
+      connect: async () => {
+        const res = await window.backpack.connect();
+        return res.publicKey.toString();
+      },
+      disconnect: async () => { try { await window.backpack.disconnect(); } catch(_){} }
+    },
+    {
+      id: 'glow',
+      name: 'Glow',
+      icon: 'https://glow.app/favicon.ico',
+      detect: () => !!window.glow,
+      connect: async () => {
+        const res = await window.glow.connect();
+        return res.publicKey.toString();
+      },
+      disconnect: async () => { try { await window.glow.disconnect(); } catch(_){} }
+    },
+    {
+      id: 'exodus',
+      name: 'Exodus',
+      icon: 'https://www.exodus.com/favicon.ico',
+      detect: () => !!window.exodus?.solana,
+      connect: async () => {
+        const res = await window.exodus.solana.connect();
+        return res.publicKey.toString();
+      },
+      disconnect: async () => { try { await window.exodus.solana.disconnect(); } catch(_){} }
+    },
+    {
+      id: 'coinbase',
+      name: 'Coinbase Wallet',
+      icon: 'https://www.coinbase.com/favicon.ico',
+      detect: () => !!window.coinbaseSolana,
+      connect: async () => {
+        const res = await window.coinbaseSolana.connect();
+        return res.publicKey.toString();
+      },
+      disconnect: async () => { try { await window.coinbaseSolana.disconnect(); } catch(_){} }
+    },
+  ];
+
+  let activeWallet = null;
+
+  // ── Build wallet list in modal ──
+  function buildWalletList() {
+    const list = document.getElementById('wallet-list');
+    list.innerHTML = '';
+    // Detected wallets first
+    const detected = WALLETS.filter(w => w.detect());
+    const notDetected = WALLETS.filter(w => !w.detect());
+    const sorted = [...detected, ...notDetected];
+
+    for (const wallet of sorted) {
+      const isInstalled = wallet.detect();
+      const btn = document.createElement('button');
+      btn.className = 'wallet-option' + (isInstalled ? '' : ' not-installed');
+      btn.innerHTML = `
+        <div class="wallet-icon">
+          <img src="${wallet.icon}" alt="${wallet.name}" onerror="this.parentElement.textContent='◈'"/>
+        </div>
+        <div class="wallet-info">
+          <div class="wallet-name">${wallet.name}</div>
+          <div class="wallet-status ${isInstalled ? 'detected' : ''}">${isInstalled ? 'Detected · Ready to connect' : 'Not installed'}</div>
+        </div>
+        <div class="wallet-arrow">${isInstalled ? '→' : ''}</div>
+      `;
+      if (isInstalled) {
+        btn.addEventListener('click', () => connectWalletById(wallet));
+      }
+      list.appendChild(btn);
+    }
+  }
+
+  // ── Connect ──
+  async function connectWalletById(wallet) {
+    closeModal();
+    try {
+      const address = await wallet.connect();
+      activeWallet = wallet;
+      onConnected(address);
+    } catch (err) {
+      showError('Connection cancelled or failed. Please try again.');
+    }
+  }
+
+  function onConnected(address) {
+    document.getElementById('connect-section').classList.add('hidden');
+    document.getElementById('app-section').classList.remove('hidden');
+    document.getElementById('nav-wallet').classList.remove('hidden');
+    document.getElementById('wallet-address').textContent =
+      address.slice(0, 4) + '...' + address.slice(-4);
+    analyzeWallet(address);
+  }
+
+  // ── Disconnect ──
+  document.getElementById('disconnect-btn').addEventListener('click', async () => {
+    if (activeWallet) await activeWallet.disconnect();
+    activeWallet = null;
+    document.getElementById('connect-section').classList.remove('hidden');
+    document.getElementById('app-section').classList.add('hidden');
+    document.getElementById('nav-wallet').classList.add('hidden');
+    document.getElementById('results-section').classList.add('hidden');
   });
+
+  // ── Modal open/close ──
+  document.getElementById('open-wallet-modal').addEventListener('click', () => {
+    buildWalletList();
+    document.getElementById('wallet-modal').classList.remove('hidden');
+  });
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('wallet-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('wallet-modal')) closeModal();
+  });
+
+  function closeModal() {
+    document.getElementById('wallet-modal').classList.add('hidden');
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 5000);
+  }
+});
 </script>
 
 </body>
