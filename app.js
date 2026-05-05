@@ -79,16 +79,24 @@ async function fetchTransactions(wallet) {
   let before = null;
   let page = 0;
 
-  while (page < 10) {
-    const url = `${HELIUS_API}/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}&limit=100${before ? `&before=${before}` : ''}`;
-    const res = await fetch(url);
-    if (!res.ok) break;
-    const txs = await res.json();
-    if (!txs || txs.length === 0) break;
-    allTxs.push(...txs);
-    before = txs[txs.length - 1].signature;
-    page++;
-    if (txs.length < 100) break;
+  while (page < 3) {
+    try {
+      const url = `${HELIUS_API}/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}&limit=100&type=SWAP${before ? `&before=${before}` : ''}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!res.ok) break;
+      const txs = await res.json();
+      if (!txs || txs.length === 0) break;
+      allTxs.push(...txs);
+      before = txs[txs.length - 1].signature;
+      page++;
+      if (txs.length < 100) break;
+    } catch (e) {
+      console.error('Fetch error:', e);
+      break;
+    }
   }
   return allTxs;
 }
