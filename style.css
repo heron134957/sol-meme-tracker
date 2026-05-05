@@ -798,3 +798,30 @@ nav {
   .features-row { gap: 16px; }
   .modal { margin: 16px; }
 }
+
+/* ── SWITCH BTN ── */
+.switch-btn {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--blue-light);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-family: 'DM Sans', sans-serif;
+  padding: 3px 10px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+.switch-btn:hover { background: var(--blue-dim); }
+
+/* ── WALLET SECTION LABELS ── */
+.wallet-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--blue-light);
+  padding: 4px 4px 8px;
+  margin-top: 8px;
+}
+.wallet-section-label:first-child { margin-top: 0; }
+.wallet-section-label.muted { color: var(--text2); margin-top: 16px; }
