@@ -1,4 +1,4 @@
-const HELIUS_API_KEY = '35969944-0121-4b82-a105-e622adfe38b8';
+const HELIUS_API_KEY = window.ENV_HELIUS_API_KEY || '35969944-0121-4b82-a105-e622adfe38b8';
 const HELIUS_API = `https://api.helius.xyz/v0`;
 
 const MAJOR_TOKENS = new Set([
@@ -9,48 +9,7 @@ const MAJOR_TOKENS = new Set([
   'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
   'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
   '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj',
-  'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', // BONK (handled separately)
 ]);
-
-let walletAddress = null;
-let analysisData = null;
-
-// ── Wallet Connection ──────────────────────────────────────────────
-async function connectWallet() {
-  try {
-    if (!window.solana || !window.solana.isPhantom) {
-      showError('Phantom wallet not found. Please install it from phantom.app');
-      return;
-    }
-    const response = await window.solana.connect();
-    walletAddress = response.publicKey.toString();
-    onWalletConnected();
-  } catch (err) {
-    showError('Wallet connection cancelled.');
-  }
-}
-
-async function connectSolflare() {
-  try {
-    if (!window.solflare) {
-      showError('Solflare wallet not found. Please install it from solflare.com');
-      return;
-    }
-    await window.solflare.connect();
-    walletAddress = window.solflare.publicKey.toString();
-    onWalletConnected();
-  } catch (err) {
-    showError('Wallet connection cancelled.');
-  }
-}
-
-function onWalletConnected() {
-  document.getElementById('connect-section').classList.add('hidden');
-  document.getElementById('app-section').classList.remove('hidden');
-  document.getElementById('wallet-address').textContent =
-    walletAddress.slice(0, 4) + '...' + walletAddress.slice(-4);
-  analyzeWallet();
-}
 
 // ── Cache Layer ────────────────────────────────────────────────────
 async function getCached(wallet) {
@@ -80,7 +39,6 @@ async function fetchTransactions(wallet) {
 
   while (page < 3) {
     try {
-      // No type filter — get ALL transactions then parse locally
       const url = `${HELIUS_API}/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}&limit=100${before ? `&before=${before}` : ''}`;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
@@ -106,16 +64,12 @@ function parseTrades(transactions, wallet) {
   const trades = {};
 
   for (const tx of transactions) {
-    // Accept SWAP, UNKNOWN, and any tx with token transfers
     if (!tx.tokenTransfers || tx.tokenTransfers.length === 0) continue;
-
     const timestamp = tx.timestamp * 1000;
 
     for (const transfer of tx.tokenTransfers) {
       const mint = transfer.mint;
       if (!mint || MAJOR_TOKENS.has(mint)) continue;
-
-      // Skip NFTs (amount is usually 1 for NFTs)
       const amount = Math.abs(parseFloat(transfer.tokenAmount) || 0);
       if (amount === 0) continue;
 
@@ -124,10 +78,8 @@ function parseTrades(transactions, wallet) {
           mint,
           symbol: transfer.tokenSymbol || 'UNKNOWN',
           name: transfer.tokenName || mint.slice(0, 8) + '...',
-          buys: [],
-          sells: [],
-          totalBought: 0,
-          totalSold: 0,
+          buys: [], sells: [],
+          totalBought: 0, totalSold: 0,
         };
       }
 
@@ -135,16 +87,15 @@ function parseTrades(transactions, wallet) {
       const fromWallet = transfer.fromUserAccount === wallet;
 
       if (toWallet) {
-        trades[mint].buys.push({ timestamp, amount, tx: tx.signature });
+        trades[mint].buys.push({ timestamp, amount });
         trades[mint].totalBought += amount;
       } else if (fromWallet) {
-        trades[mint].sells.push({ timestamp, amount, tx: tx.signature });
+        trades[mint].sells.push({ timestamp, amount });
         trades[mint].totalSold += amount;
       }
     }
   }
 
-  // Only return coins where we have buys
   return Object.values(trades).filter(t => t.buys.length > 0);
 }
 
@@ -168,51 +119,40 @@ async function fetchTokenPrice(mint) {
       name: pair.baseToken?.name || 'Unknown',
       pairUrl: pair.url || '',
     };
-  } catch (_) {
-    return null;
-  }
+  } catch (_) { return null; }
 }
 
 // ── Calculate Hold Analysis ───────────────────────────────────────
 function calculateHoldAnalysis(trade, currentPrice) {
   if (!trade.buys.length || !currentPrice) return null;
-
   const firstBuy = Math.min(...trade.buys.map(b => b.timestamp));
-  const lastSell = trade.sells.length
-    ? Math.max(...trade.sells.map(s => s.timestamp))
-    : null;
-
+  const lastSell = trade.sells.length ? Math.max(...trade.sells.map(s => s.timestamp)) : null;
   const holdDays = lastSell
     ? Math.round((lastSell - firstBuy) / 86400000)
     : Math.round((Date.now() - firstBuy) / 86400000);
-
   const stillHolding = trade.totalBought > trade.totalSold * 1.01;
   const remainingTokens = Math.max(0, trade.totalBought - trade.totalSold);
-  const currentValue = remainingTokens * currentPrice.priceUsd;
-  const whatIfValue = trade.totalBought * currentPrice.priceUsd;
-
   return {
     firstBuyDate: new Date(firstBuy).toLocaleDateString(),
     lastSellDate: lastSell ? new Date(lastSell).toLocaleDateString() : 'Still holding',
     holdDays,
     stillHolding,
     remainingTokens,
-    currentValue,
-    whatIfValue,
+    currentValue: remainingTokens * currentPrice.priceUsd,
+    whatIfValue: trade.totalBought * currentPrice.priceUsd,
     totalBought: trade.totalBought,
     totalSold: trade.totalSold,
   };
 }
 
 // ── Main Analysis ─────────────────────────────────────────────────
-async function analyzeWallet() {
+async function analyzeWallet(walletAddress) {
   showLoading('Checking cache...');
 
   const cached = await getCached(walletAddress);
   if (cached) {
-    analysisData = cached;
-    renderResults(analysisData);
-    showToast('Loaded from cache (updates every 24h)');
+    renderResults(cached);
+    showToast('✓ Loaded from cache — updates every 24h');
     return;
   }
 
@@ -223,16 +163,13 @@ async function analyzeWallet() {
   const trades = parseTrades(transactions, walletAddress);
 
   if (trades.length === 0) {
-    showLoading('No meme coin trades found...');
-    setTimeout(() => {
-      document.getElementById('loading-section').classList.add('hidden');
-      document.getElementById('results-section').classList.remove('hidden');
-      document.getElementById('total-coins').textContent = '0';
-      document.getElementById('still-holding').textContent = '0';
-      document.getElementById('total-whatif').textContent = '$0.00';
-      document.getElementById('coins-list').innerHTML =
-        '<div class="no-data">No meme coin trades found in your last 300 transactions.</div>';
-    }, 1500);
+    document.getElementById('loading-section').classList.add('hidden');
+    document.getElementById('results-section').classList.remove('hidden');
+    document.getElementById('total-coins').textContent = '0';
+    document.getElementById('still-holding').textContent = '0';
+    document.getElementById('total-whatif').textContent = '$0.00';
+    document.getElementById('coins-list').innerHTML =
+      '<div class="no-data">No meme coin trades found in your last 300 transactions.</div>';
     return;
   }
 
@@ -240,21 +177,17 @@ async function analyzeWallet() {
   const results = [];
 
   for (let i = 0; i < trades.length; i++) {
-    const trade = trades[i];
     showLoading(`Fetching prices... (${i + 1}/${trades.length})`);
-    const price = await fetchTokenPrice(trade.mint);
-    const analysis = calculateHoldAnalysis(trade, price);
-    if (analysis) {
-      results.push({ ...trade, price, analysis });
-    }
+    const price = await fetchTokenPrice(trades[i].mint);
+    const analysis = calculateHoldAnalysis(trades[i], price);
+    if (analysis) results.push({ ...trades[i], price, analysis });
     await sleep(150);
   }
 
   results.sort((a, b) => (b.analysis?.whatIfValue || 0) - (a.analysis?.whatIfValue || 0));
-
-  analysisData = { results, walletAddress, fetchedAt: new Date().toISOString() };
-  await saveCache(walletAddress, analysisData);
-  renderResults(analysisData);
+  const data = { results, walletAddress, fetchedAt: new Date().toISOString() };
+  await saveCache(walletAddress, data);
+  renderResults(data);
 }
 
 // ── Render Results ────────────────────────────────────────────────
@@ -264,9 +197,8 @@ function renderResults(data) {
   document.getElementById('results-section').classList.remove('hidden');
 
   document.getElementById('total-coins').textContent = results.length;
-  const stillHolding = results.filter(r => r.analysis.stillHolding).length;
-  document.getElementById('still-holding').textContent = stillHolding;
-  const totalWhatIf = results.reduce((sum, r) => sum + (r.analysis.whatIfValue || 0), 0);
+  document.getElementById('still-holding').textContent = results.filter(r => r.analysis.stillHolding).length;
+  const totalWhatIf = results.reduce((s, r) => s + (r.analysis.whatIfValue || 0), 0);
   document.getElementById('total-whatif').textContent = formatUSD(totalWhatIf);
 
   const container = document.getElementById('coins-list');
@@ -277,9 +209,11 @@ function renderResults(data) {
     return;
   }
 
-  for (const item of results) {
-    container.appendChild(buildCoinCard(item));
-  }
+  results.forEach((item, i) => {
+    const card = buildCoinCard(item);
+    card.style.animationDelay = `${i * 0.06}s`;
+    container.appendChild(card);
+  });
 }
 
 function buildCoinCard(item) {
@@ -287,7 +221,7 @@ function buildCoinCard(item) {
   const card = document.createElement('div');
   card.className = 'coin-card';
 
-  const whatIfClass = analysis.whatIfValue > 0 ? 'positive' : 'negative';
+  const whatIfClass = analysis.whatIfValue > 1 ? 'positive' : analysis.whatIfValue > 0 ? 'neutral' : 'negative';
   const statusBadge = analysis.stillHolding
     ? '<span class="badge holding">Holding</span>'
     : '<span class="badge sold">Sold</span>';
@@ -307,7 +241,7 @@ function buildCoinCard(item) {
       </div>
       <div class="stat">
         <div class="stat-label">Held For</div>
-        <div class="stat-value">${analysis.holdDays} days</div>
+        <div class="stat-value">${analysis.holdDays}d</div>
       </div>
       <div class="stat">
         <div class="stat-label">Total Bought</div>
@@ -331,7 +265,13 @@ function buildCoinCard(item) {
 // ── Helpers ───────────────────────────────────────────────────────
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function formatUSD(n) { return '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-function formatNumber(n) { return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+function formatNumber(n) {
+  const v = n || 0;
+  if (v >= 1e9) return (v/1e9).toFixed(2) + 'B';
+  if (v >= 1e6) return (v/1e6).toFixed(2) + 'M';
+  if (v >= 1e3) return (v/1e3).toFixed(2) + 'K';
+  return v.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
 function formatPrice(n) {
   if (!n) return '$0';
   if (n >= 0.01) return '$' + n.toFixed(4);
@@ -345,13 +285,6 @@ function showLoading(msg) {
   document.getElementById('loading-text').textContent = msg;
 }
 
-function showError(msg) {
-  const el = document.getElementById('error-msg');
-  el.textContent = msg;
-  el.classList.remove('hidden');
-  setTimeout(() => el.classList.add('hidden'), 5000);
-}
-
 function showToast(msg) {
   const toast = document.createElement('div');
   toast.className = 'toast';
@@ -359,15 +292,3 @@ function showToast(msg) {
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
 }
-
-function disconnectWallet() {
-  walletAddress = null;
-  analysisData = null;
-  document.getElementById('connect-section').classList.remove('hidden');
-  document.getElementById('app-section').classList.add('hidden');
-  document.getElementById('results-section').classList.add('hidden');
-}
-
-window.connectWallet = connectWallet;
-window.connectSolflare = connectSolflare;
-window.disconnectWallet = disconnectWallet;
