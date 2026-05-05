@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MemeScope — Solana Meme Coin Analyzer</title>
+  <meta name="description" content="Connect your Solana wallet and discover how much you could have made if you held your meme coins longer." />
+  <link rel="stylesheet" href="style.css" />
+  <script>
+    // Inject environment variables safely
+    window.ENV_HELIUS_API_KEY = '__HELIUS_API_KEY__';
+  </script>
+</head>
+<body>
+
+<nav>
+  <div class="container" style="display:flex;align-items:center;justify-content:space-between;width:100%">
+    <div class="logo">Meme<span>Scope</span></div>
+    <div id="nav-wallet" class="hidden">
+      <div class="wallet-pill">
+        <div class="wallet-dot"></div>
+        <span id="wallet-address"></span>
+        <button class="disconnect-btn" onclick="disconnectWallet()">Disconnect</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Connect Section -->
+  <section id="connect-section">
+    <div class="hero-badge">✦ Solana Meme Coin Analyzer</div>
+    <h1 class="hero-title">
+      What if you<br/>
+      <span class="highlight">held longer?</span>
+    </h1>
+    <p class="hero-sub">
+      Connect your Solana wallet to analyze your meme coin trade history and see exactly how much you left on the table.
+    </p>
+
+    <div id="error-msg" class="hidden"></div>
+
+    <div class="wallet-buttons">
+      <button class="wallet-btn" onclick="connectWallet()">
+        <img src="https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png"
+             onerror="this.style.display='none'"
+             alt="Phantom" />
+        Connect Phantom
+      </button>
+      <button class="wallet-btn" onclick="connectSolflare()">
+        <img src="https://solflare.com/favicon.ico"
+             onerror="this.style.display='none'"
+             alt="Solflare" />
+        Connect Solflare
+      </button>
+    </div>
+
+    <div class="features">
+      <div class="feature"><div class="feature-dot"></div>Non-custodial</div>
+      <div class="feature"><div class="feature-dot"></div>Read-only analysis</div>
+      <div class="feature"><div class="feature-dot"></div>No private keys needed</div>
+      <div class="feature"><div class="feature-dot"></div>Results cached 24h</div>
+    </div>
+  </section>
+
+  <!-- App Section (shown after wallet connect) -->
+  <section id="app-section" class="hidden">
+
+    <!-- Loading -->
+    <div id="loading-section">
+      <div class="loader"></div>
+      <div id="loading-text">Connecting...</div>
+    </div>
+
+    <!-- Results -->
+    <div id="results-section" class="hidden">
+      <div class="stats-bar">
+        <div class="stat-box">
+          <div class="stat-box-label">Meme Coins Traded</div>
+          <div class="stat-box-value" id="total-coins">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">Still Holding</div>
+          <div class="stat-box-value" id="still-holding">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">Total "What If" Value</div>
+          <div class="stat-box-value" id="total-whatif">—</div>
+        </div>
+      </div>
+
+      <div class="section-title">Your Meme Coin History</div>
+      <div id="coins-list"></div>
+    </div>
+
+  </section>
+
+</div>
+
+<script src="app.js"></script>
+<script>
+  // Show nav wallet info when connected
+  const origOnConnected = window.onWalletConnected;
+  document.addEventListener('DOMContentLoaded', () => {
+    const appSection = document.getElementById('app-section');
+    const observer = new MutationObserver(() => {
+      if (!appSection.classList.contains('hidden')) {
+        document.getElementById('nav-wallet').classList.remove('hidden');
+      } else {
+        document.getElementById('nav-wallet').classList.add('hidden');
+      }
+    });
+    observer.observe(appSection, { attributes: true });
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "sol-meme-tracker",
+  "version": "1.0.0",
+  "description": "Solana meme coin hold analyzer",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
