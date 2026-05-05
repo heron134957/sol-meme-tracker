@@ -11,7 +11,6 @@ const MAJOR_TOKENS = new Set([
   '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj',
 ]);
 
-// ── Cache Layer ────────────────────────────────────────────────────
 async function getCached(wallet) {
   try {
     const res = await fetch(`/api/cache?wallet=${wallet}`);
@@ -31,12 +30,10 @@ async function saveCache(wallet, data) {
   } catch (_) {}
 }
 
-// ── Fetch Transactions via Helius ─────────────────────────────────
 async function fetchTransactions(wallet) {
   const allTxs = [];
   let before = null;
   let page = 0;
-
   while (page < 3) {
     try {
       const url = `${HELIUS_API}/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}&limit=100${before ? `&before=${before}` : ''}`;
@@ -51,55 +48,41 @@ async function fetchTransactions(wallet) {
       before = txs[txs.length - 1].signature;
       page++;
       if (txs.length < 100) break;
-    } catch (e) {
-      console.error('Fetch error:', e);
-      break;
-    }
+    } catch (e) { console.error(e); break; }
   }
   return allTxs;
 }
 
-// ── Parse Meme Coin Trades ────────────────────────────────────────
 function parseTrades(transactions, wallet) {
   const trades = {};
-
   for (const tx of transactions) {
     if (!tx.tokenTransfers || tx.tokenTransfers.length === 0) continue;
     const timestamp = tx.timestamp * 1000;
-
     for (const transfer of tx.tokenTransfers) {
       const mint = transfer.mint;
       if (!mint || MAJOR_TOKENS.has(mint)) continue;
       const amount = Math.abs(parseFloat(transfer.tokenAmount) || 0);
       if (amount === 0) continue;
-
       if (!trades[mint]) {
         trades[mint] = {
           mint,
           symbol: transfer.tokenSymbol || 'UNKNOWN',
           name: transfer.tokenName || mint.slice(0, 8) + '...',
-          buys: [], sells: [],
-          totalBought: 0, totalSold: 0,
+          buys: [], sells: [], totalBought: 0, totalSold: 0,
         };
       }
-
-      const toWallet = transfer.toUserAccount === wallet;
-      const fromWallet = transfer.fromUserAccount === wallet;
-
-      if (toWallet) {
+      if (transfer.toUserAccount === wallet) {
         trades[mint].buys.push({ timestamp, amount });
         trades[mint].totalBought += amount;
-      } else if (fromWallet) {
+      } else if (transfer.fromUserAccount === wallet) {
         trades[mint].sells.push({ timestamp, amount });
         trades[mint].totalSold += amount;
       }
     }
   }
-
   return Object.values(trades).filter(t => t.buys.length > 0);
 }
 
-// ── Fetch Price via DexScreener ───────────────────────────────────
 async function fetchTokenPrice(mint) {
   try {
     const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
@@ -111,10 +94,6 @@ async function fetchTokenPrice(mint) {
     const pair = pairs[0];
     return {
       priceUsd: parseFloat(pair.priceUsd || 0),
-      priceChange24h: pair.priceChange?.h24 || 0,
-      volume24h: pair.volume?.h24 || 0,
-      liquidity: pair.liquidity?.usd || 0,
-      marketCap: pair.marketCap || 0,
       symbol: pair.baseToken?.symbol || 'UNKNOWN',
       name: pair.baseToken?.name || 'Unknown',
       pairUrl: pair.url || '',
@@ -122,7 +101,6 @@ async function fetchTokenPrice(mint) {
   } catch (_) { return null; }
 }
 
-// ── Calculate Hold Analysis ───────────────────────────────────────
 function calculateHoldAnalysis(trade, currentPrice) {
   if (!trade.buys.length || !currentPrice) return null;
   const firstBuy = Math.min(...trade.buys.map(b => b.timestamp));
@@ -135,17 +113,13 @@ function calculateHoldAnalysis(trade, currentPrice) {
   return {
     firstBuyDate: new Date(firstBuy).toLocaleDateString(),
     lastSellDate: lastSell ? new Date(lastSell).toLocaleDateString() : 'Still holding',
-    holdDays,
-    stillHolding,
-    remainingTokens,
+    holdDays, stillHolding, remainingTokens,
     currentValue: remainingTokens * currentPrice.priceUsd,
     whatIfValue: trade.totalBought * currentPrice.priceUsd,
-    totalBought: trade.totalBought,
-    totalSold: trade.totalSold,
+    totalBought: trade.totalBought, totalSold: trade.totalSold,
   };
 }
 
-// ── Main Analysis ─────────────────────────────────────────────────
 async function analyzeWallet(walletAddress) {
   showLoading('Checking cache...');
 
@@ -156,9 +130,13 @@ async function analyzeWallet(walletAddress) {
     return;
   }
 
+  // Step 1
+  if (window.activateLoadingStep) window.activateLoadingStep(0);
   showLoading('Fetching your transactions...');
   const transactions = await fetchTransactions(walletAddress);
 
+  // Step 2
+  if (window.activateLoadingStep) window.activateLoadingStep(1);
   showLoading(`Parsing ${transactions.length} transactions...`);
   const trades = parseTrades(transactions, walletAddress);
 
@@ -169,20 +147,27 @@ async function analyzeWallet(walletAddress) {
     document.getElementById('still-holding').textContent = '0';
     document.getElementById('total-whatif').textContent = '$0.00';
     document.getElementById('coins-list').innerHTML =
-      '<div class="no-data">No meme coin trades found in your last 300 transactions.</div>';
+      '<div class="no-data">😅 No meme coin trades found in your last 300 transactions.</div>';
     return;
   }
 
+  // Step 3
+  if (window.activateLoadingStep) window.activateLoadingStep(2);
   showLoading(`Found ${trades.length} meme coins! Fetching prices...`);
   const results = [];
 
   for (let i = 0; i < trades.length; i++) {
-    showLoading(`Fetching prices... (${i + 1}/${trades.length})`);
+    showLoading(`💰 Getting prices... (${i + 1}/${trades.length})`);
     const price = await fetchTokenPrice(trades[i].mint);
     const analysis = calculateHoldAnalysis(trades[i], price);
     if (analysis) results.push({ ...trades[i], price, analysis });
     await sleep(150);
   }
+
+  // Step 4
+  if (window.activateLoadingStep) window.activateLoadingStep(3);
+  showLoading('Calculating your missed gains...');
+  await sleep(600);
 
   results.sort((a, b) => (b.analysis?.whatIfValue || 0) - (a.analysis?.whatIfValue || 0));
   const data = { results, walletAddress, fetchedAt: new Date().toISOString() };
@@ -190,7 +175,6 @@ async function analyzeWallet(walletAddress) {
   renderResults(data);
 }
 
-// ── Render Results ────────────────────────────────────────────────
 function renderResults(data) {
   const { results } = data;
   document.getElementById('loading-section').classList.add('hidden');
@@ -205,13 +189,13 @@ function renderResults(data) {
   container.innerHTML = '';
 
   if (results.length === 0) {
-    container.innerHTML = '<div class="no-data">No meme coin trades found in this wallet.</div>';
+    container.innerHTML = '<div class="no-data">😅 No meme coin trades found.</div>';
     return;
   }
 
   results.forEach((item, i) => {
     const card = buildCoinCard(item);
-    card.style.animationDelay = `${i * 0.06}s`;
+    card.style.animationDelay = `${i * 0.07}s`;
     container.appendChild(card);
   });
 }
@@ -223,7 +207,7 @@ function buildCoinCard(item) {
 
   const whatIfClass = analysis.whatIfValue > 1 ? 'positive' : analysis.whatIfValue > 0 ? 'neutral' : 'negative';
   const statusBadge = analysis.stillHolding
-    ? '<span class="badge holding">Holding</span>'
+    ? '<span class="badge holding">🟢 Holding</span>'
     : '<span class="badge sold">Sold</span>';
 
   card.innerHTML = `
@@ -232,7 +216,7 @@ function buildCoinCard(item) {
         <div class="coin-symbol">${price?.symbol || item.symbol}</div>
         <div class="coin-name">${price?.name || item.name}</div>
       </div>
-      <div class="coin-badges">${statusBadge}</div>
+      ${statusBadge}
     </div>
     <div class="coin-stats">
       <div class="stat">
@@ -248,47 +232,43 @@ function buildCoinCard(item) {
         <div class="stat-value">${formatNumber(analysis.totalBought)}</div>
       </div>
       <div class="stat">
-        <div class="stat-label">Current Price</div>
+        <div class="stat-label">Price Now</div>
         <div class="stat-value">${price ? formatPrice(price.priceUsd) : 'N/A'}</div>
       </div>
     </div>
     <div class="whatif-box">
-      <div class="whatif-label">💎 If you held all tokens until now</div>
+      <div class="whatif-label">If you held all tokens until today</div>
       <div class="whatif-value ${whatIfClass}">${formatUSD(analysis.whatIfValue)}</div>
-      ${analysis.stillHolding ? `<div class="current-value">Current holdings: ${formatUSD(analysis.currentValue)}</div>` : ''}
+      ${analysis.stillHolding ? `<div class="current-value">Current value: ${formatUSD(analysis.currentValue)}</div>` : ''}
     </div>
     ${price?.pairUrl ? `<a href="${price.pairUrl}" target="_blank" class="dex-link">View on DexScreener →</a>` : ''}
   `;
   return card;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function formatUSD(n) { return '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function formatUSD(n) { return '$' + (n||0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
 function formatNumber(n) {
-  const v = n || 0;
-  if (v >= 1e9) return (v/1e9).toFixed(2) + 'B';
-  if (v >= 1e6) return (v/1e6).toFixed(2) + 'M';
-  if (v >= 1e3) return (v/1e3).toFixed(2) + 'K';
-  return v.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  const v = n||0;
+  if (v>=1e9) return (v/1e9).toFixed(2)+'B';
+  if (v>=1e6) return (v/1e6).toFixed(2)+'M';
+  if (v>=1e3) return (v/1e3).toFixed(2)+'K';
+  return v.toLocaleString('en-US', { maximumFractionDigits:2 });
 }
 function formatPrice(n) {
   if (!n) return '$0';
-  if (n >= 0.01) return '$' + n.toFixed(4);
-  if (n >= 0.000001) return '$' + n.toFixed(8);
-  return '$' + n.toExponential(4);
+  if (n >= 0.01) return '$'+n.toFixed(4);
+  if (n >= 0.000001) return '$'+n.toFixed(8);
+  return '$'+n.toExponential(4);
 }
-
 function showLoading(msg) {
   document.getElementById('loading-section').classList.remove('hidden');
   document.getElementById('results-section').classList.add('hidden');
   document.getElementById('loading-text').textContent = msg;
 }
-
 function showToast(msg) {
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = msg;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
 }
