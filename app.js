@@ -1,16 +1,15 @@
-const HELIUS_API_KEY = window.ENV_HELIUS_API_KEY;
-const HELIUS_URL = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
+const HELIUS_API_KEY = '35969944-0121-4b82-a105-e622adfe38b8';
 const HELIUS_API = `https://api.helius.xyz/v0`;
 
-// Known major tokens to exclude (not meme coins)
 const MAJOR_TOKENS = new Set([
-  'So11111111111111111111111111111111111111112',  // SOL
-  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
-  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
-  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', // mSOL
-  'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn', // jitoSOL
-  'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',  // bSOL
-  '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj', // stSOL
+  'So11111111111111111111111111111111111111112',
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
+  'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+  'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+  '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj',
+  'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', // BONK (handled separately)
 ]);
 
 let walletAddress = null;
@@ -81,9 +80,10 @@ async function fetchTransactions(wallet) {
 
   while (page < 3) {
     try {
-      const url = `${HELIUS_API}/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}&limit=100&type=SWAP${before ? `&before=${before}` : ''}`;
+      // No type filter — get ALL transactions then parse locally
+      const url = `${HELIUS_API}/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}&limit=100${before ? `&before=${before}` : ''}`;
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
+      const timeout = setTimeout(() => controller.abort(), 15000);
       const res = await fetch(url, { signal: controller.signal });
       clearTimeout(timeout);
       if (!res.ok) break;
@@ -102,11 +102,11 @@ async function fetchTransactions(wallet) {
 }
 
 // ── Parse Meme Coin Trades ────────────────────────────────────────
-function parseTrades(transactions) {
+function parseTrades(transactions, wallet) {
   const trades = {};
 
   for (const tx of transactions) {
-    if (tx.type !== 'SWAP' && tx.type !== 'TOKEN_MINT') continue;
+    // Accept SWAP, UNKNOWN, and any tx with token transfers
     if (!tx.tokenTransfers || tx.tokenTransfers.length === 0) continue;
 
     const timestamp = tx.timestamp * 1000;
@@ -114,6 +114,10 @@ function parseTrades(transactions) {
     for (const transfer of tx.tokenTransfers) {
       const mint = transfer.mint;
       if (!mint || MAJOR_TOKENS.has(mint)) continue;
+
+      // Skip NFTs (amount is usually 1 for NFTs)
+      const amount = Math.abs(parseFloat(transfer.tokenAmount) || 0);
+      if (amount === 0) continue;
 
       if (!trades[mint]) {
         trades[mint] = {
@@ -124,36 +128,34 @@ function parseTrades(transactions) {
           sells: [],
           totalBought: 0,
           totalSold: 0,
-          totalSpentSOL: 0,
-          totalReceivedSOL: 0,
         };
       }
 
-      const amount = Math.abs(transfer.tokenAmount || 0);
-      const fromWallet = transfer.fromUserAccount === wallet;
       const toWallet = transfer.toUserAccount === wallet;
+      const fromWallet = transfer.fromUserAccount === wallet;
 
-      if (toWallet && amount > 0) {
+      if (toWallet) {
         trades[mint].buys.push({ timestamp, amount, tx: tx.signature });
         trades[mint].totalBought += amount;
-      } else if (fromWallet && amount > 0) {
+      } else if (fromWallet) {
         trades[mint].sells.push({ timestamp, amount, tx: tx.signature });
         trades[mint].totalSold += amount;
       }
     }
   }
 
+  // Only return coins where we have buys
   return Object.values(trades).filter(t => t.buys.length > 0);
 }
 
-// ── Fetch Current & Historical Prices via DexScreener ────────────
+// ── Fetch Price via DexScreener ───────────────────────────────────
 async function fetchTokenPrice(mint) {
   try {
     const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
+    if (!res.ok) return null;
     const json = await res.json();
     const pairs = json.pairs?.filter(p => p.chainId === 'solana');
     if (!pairs || pairs.length === 0) return null;
-    // Pick highest liquidity pair
     pairs.sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0));
     const pair = pairs[0];
     return {
@@ -184,11 +186,9 @@ function calculateHoldAnalysis(trade, currentPrice) {
     ? Math.round((lastSell - firstBuy) / 86400000)
     : Math.round((Date.now() - firstBuy) / 86400000);
 
-  const stillHolding = trade.totalBought > trade.totalSold;
+  const stillHolding = trade.totalBought > trade.totalSold * 1.01;
   const remainingTokens = Math.max(0, trade.totalBought - trade.totalSold);
   const currentValue = remainingTokens * currentPrice.priceUsd;
-
-  // What if held until now?
   const whatIfValue = trade.totalBought * currentPrice.priceUsd;
 
   return {
@@ -208,7 +208,6 @@ function calculateHoldAnalysis(trade, currentPrice) {
 async function analyzeWallet() {
   showLoading('Checking cache...');
 
-  // Try cache first
   const cached = await getCached(walletAddress);
   if (cached) {
     analysisData = cached;
@@ -221,9 +220,23 @@ async function analyzeWallet() {
   const transactions = await fetchTransactions(walletAddress);
 
   showLoading(`Parsing ${transactions.length} transactions...`);
-  const trades = parseTrades(transactions);
+  const trades = parseTrades(transactions, walletAddress);
 
-  showLoading(`Analyzing ${trades.length} meme coins...`);
+  if (trades.length === 0) {
+    showLoading('No meme coin trades found...');
+    setTimeout(() => {
+      document.getElementById('loading-section').classList.add('hidden');
+      document.getElementById('results-section').classList.remove('hidden');
+      document.getElementById('total-coins').textContent = '0';
+      document.getElementById('still-holding').textContent = '0';
+      document.getElementById('total-whatif').textContent = '$0.00';
+      document.getElementById('coins-list').innerHTML =
+        '<div class="no-data">No meme coin trades found in your last 300 transactions.</div>';
+    }, 1500);
+    return;
+  }
+
+  showLoading(`Found ${trades.length} meme coins! Fetching prices...`);
   const results = [];
 
   for (let i = 0; i < trades.length; i++) {
@@ -234,10 +247,9 @@ async function analyzeWallet() {
     if (analysis) {
       results.push({ ...trade, price, analysis });
     }
-    await sleep(100); // Rate limit protection
+    await sleep(150);
   }
 
-  // Sort by what-if value descending
   results.sort((a, b) => (b.analysis?.whatIfValue || 0) - (a.analysis?.whatIfValue || 0));
 
   analysisData = { results, walletAddress, fetchedAt: new Date().toISOString() };
@@ -252,10 +264,8 @@ function renderResults(data) {
   document.getElementById('results-section').classList.remove('hidden');
 
   document.getElementById('total-coins').textContent = results.length;
-
   const stillHolding = results.filter(r => r.analysis.stillHolding).length;
   document.getElementById('still-holding').textContent = stillHolding;
-
   const totalWhatIf = results.reduce((sum, r) => sum + (r.analysis.whatIfValue || 0), 0);
   document.getElementById('total-whatif').textContent = formatUSD(totalWhatIf);
 
@@ -268,8 +278,7 @@ function renderResults(data) {
   }
 
   for (const item of results) {
-    const card = buildCoinCard(item);
-    container.appendChild(card);
+    container.appendChild(buildCoinCard(item));
   }
 }
 
@@ -312,7 +321,7 @@ function buildCoinCard(item) {
     <div class="whatif-box">
       <div class="whatif-label">💎 If you held all tokens until now</div>
       <div class="whatif-value ${whatIfClass}">${formatUSD(analysis.whatIfValue)}</div>
-      ${analysis.stillHolding ? `<div class="current-value">Current holdings value: ${formatUSD(analysis.currentValue)}</div>` : ''}
+      ${analysis.stillHolding ? `<div class="current-value">Current holdings: ${formatUSD(analysis.currentValue)}</div>` : ''}
     </div>
     ${price?.pairUrl ? `<a href="${price.pairUrl}" target="_blank" class="dex-link">View on DexScreener →</a>` : ''}
   `;
@@ -324,6 +333,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function formatUSD(n) { return '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function formatNumber(n) { return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
 function formatPrice(n) {
+  if (!n) return '$0';
   if (n >= 0.01) return '$' + n.toFixed(4);
   if (n >= 0.000001) return '$' + n.toFixed(8);
   return '$' + n.toExponential(4);
