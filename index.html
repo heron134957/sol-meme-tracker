@@ -3,140 +3,291 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MemeScope — Solana Meme Coin Analyzer</title>
-  <meta name="description" content="Connect your Solana wallet and discover how much you could have made if you held your meme coins longer." />
+  <title>MemeScope — Did You Miss Being a Millionaire?</title>
+  <meta name="description" content="Connect your Solana wallet. See exactly how much you left on the table." />
   <link rel="stylesheet" href="style.css" />
-  <script>
-    window.ENV_HELIUS_API_KEY = '35969944-0121-4b82-a105-e622adfe38b8';
-  </script>
+  <script>window.ENV_HELIUS_API_KEY = '35969944-0121-4b82-a105-e622adfe38b8';</script>
 </head>
 <body>
 
-<!-- ── NAV ── -->
+<!-- PARTICLE CANVAS -->
+<canvas id="particles"></canvas>
+
+<!-- NAV -->
 <nav>
   <div class="container">
     <div class="nav-inner">
       <div class="logo">
-        <div class="logo-icon">◈</div>
-        Meme<span>Scope</span>
+        <div class="logo-mark">
+          <span class="logo-ring"></span>
+          <span class="logo-dollar">$</span>
+        </div>
+        <span class="logo-text">Meme<em>Scope</em></span>
       </div>
-      <div class="nav-right">
-        <div id="nav-wallet" class="hidden">
-          <div class="wallet-pill">
-            <div class="wallet-dot"></div>
-            <span id="wallet-address"></span>
-            <button class="switch-btn" id="switch-btn">Switch</button>
-            <button class="disconnect-btn" id="disconnect-btn">Disconnect</button>
-          </div>
+      <div id="nav-wallet" class="hidden">
+        <div class="wallet-pill">
+          <span class="live-dot"></span>
+          <span id="wallet-address"></span>
+          <button class="switch-btn" id="switch-btn">Switch</button>
+          <button class="disconnect-btn" id="disconnect-btn">✕</button>
         </div>
       </div>
     </div>
   </div>
 </nav>
 
-<!-- ── WALLET MODAL ── -->
+<!-- WALLET MODAL -->
 <div class="modal-overlay hidden" id="wallet-modal">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">Connect Wallet</div>
       <button class="modal-close" id="modal-close">✕</button>
     </div>
-    <p class="modal-sub">Select your wallet to connect to MemeScope</p>
+    <p class="modal-sub">Select your wallet — all Solana wallets supported</p>
     <div class="wallet-list" id="wallet-list"></div>
-    <div class="modal-footer">
-      🔒 Read-only access · No private keys required · Your funds stay safe
-    </div>
+    <div class="modal-footer">🔒 Read-only · No private keys · Funds stay safe</div>
   </div>
 </div>
 
-<div class="container">
+<!-- HERO -->
+<section id="connect-section">
+  <div class="hero-container">
 
-  <!-- ── CONNECT SECTION ── -->
-  <section id="connect-section">
-    <div class="hero-eyebrow">
-      <div class="hero-eyebrow-dot"></div>
-      Solana Meme Coin Analyzer
+    <!-- Floating money emojis -->
+    <div class="floaters">
+      <span class="floater" style="--d:0s;--x:10%;--size:2rem">💎</span>
+      <span class="floater" style="--d:1s;--x:80%;--size:1.5rem">🚀</span>
+      <span class="floater" style="--d:2s;--x:20%;--size:2.5rem">💰</span>
+      <span class="floater" style="--d:0.5s;--x:70%;--size:1.8rem">📈</span>
+      <span class="floater" style="--d:1.5s;--x:40%;--size:1.3rem">🔥</span>
+      <span class="floater" style="--d:3s;--x:60%;--size:2rem">💎</span>
+      <span class="floater" style="--d:2.5s;--x:90%;--size:1.5rem">🌙</span>
+      <span class="floater" style="--d:0.8s;--x:5%;--size:1.8rem">💸</span>
     </div>
-    <h1 class="hero-title">
-      What if you<br/>
-      <em>held longer?</em>
-      <span class="line2">Find out now.</span>
-    </h1>
-    <p class="hero-sub">
-      Connect your Solana wallet to analyze your full meme coin trade history and see exactly how much you left on the table — or gained.
-    </p>
-    <div id="error-msg" class="hidden"></div>
-    <button class="connect-btn-primary" id="open-wallet-modal">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="2" y="5" width="20" height="14" rx="2"/>
-        <path d="M16 12h.01"/>
-      </svg>
-      Connect Wallet
-    </button>
-    <div class="stats-strip">
-      <div class="strip-item">
-        <div class="strip-label">Wallets Supported</div>
-        <div class="strip-value blue">All</div>
-      </div>
-      <div class="strip-item">
-        <div class="strip-label">Data Source</div>
-        <div class="strip-value">On-chain</div>
-      </div>
-      <div class="strip-item">
-        <div class="strip-label">Cost</div>
-        <div class="strip-value green">Free</div>
-      </div>
-    </div>
-    <div class="features-row">
-      <div class="feature-chip"><div class="feature-check">✓</div>Non-custodial</div>
-      <div class="feature-chip"><div class="feature-check">✓</div>Read-only analysis</div>
-      <div class="feature-chip"><div class="feature-check">✓</div>No private keys needed</div>
-      <div class="feature-chip"><div class="feature-check">✓</div>Results cached 24h</div>
-      <div class="feature-chip"><div class="feature-check">✓</div>All Solana wallets</div>
-    </div>
-  </section>
 
-  <!-- ── APP SECTION ── -->
-  <section id="app-section" class="hidden">
-    <div id="loading-section">
-      <div class="loader-ring"></div>
-      <div id="loading-text">Connecting...</div>
-      <div class="loading-sub">This may take a moment for large wallets</div>
+    <!-- Live ticker -->
+    <div class="ticker-wrap">
+      <div class="ticker">
+        <span>BONK +420%</span><span class="sep">•</span>
+        <span>WIF +1200%</span><span class="sep">•</span>
+        <span>POPCAT +800%</span><span class="sep">•</span>
+        <span>MOODENG +650%</span><span class="sep">•</span>
+        <span>GOAT +3000%</span><span class="sep">•</span>
+        <span>PNUT +900%</span><span class="sep">•</span>
+        <span>BONK +420%</span><span class="sep">•</span>
+        <span>WIF +1200%</span><span class="sep">•</span>
+        <span>POPCAT +800%</span><span class="sep">•</span>
+        <span>MOODENG +650%</span><span class="sep">•</span>
+        <span>GOAT +3000%</span><span class="sep">•</span>
+        <span>PNUT +900%</span>
+      </div>
     </div>
-    <div id="results-section" class="hidden">
-      <div class="stats-bar">
-        <div class="stat-box">
-          <div class="stat-box-label">Meme Coins Traded</div>
-          <div class="stat-box-value blue" id="total-coins">—</div>
-          <div class="stat-box-sub">Unique tokens found</div>
+
+    <div class="hero-content">
+
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        SOLANA MEME COIN ANALYZER
+      </div>
+
+      <h1 class="hero-title">
+        <span class="title-line1">Did You Miss</span>
+        <span class="title-line2">Being a</span>
+        <span class="title-line3">
+          <span class="million-text">Millionaire?</span>
+          <span class="title-cursor">|</span>
+        </span>
+      </h1>
+
+      <p class="hero-sub">
+        Connect your wallet. We'll show you <strong>exactly</strong> how much you left on the table by selling your meme coins too early. 
+        <span class="sub-warning">Warning: this might hurt. 💀</span>
+      </p>
+
+      <div id="error-msg" class="hidden"></div>
+
+      <button class="connect-btn-primary" id="open-wallet-modal">
+        <span class="btn-glow"></span>
+        <span class="btn-icon">⚡</span>
+        <span>Connect Wallet & Find Out</span>
+        <span class="btn-arrow">→</span>
+      </button>
+
+      <div class="social-proof">
+        <div class="proof-avatars">
+          <div class="avatar" style="background:#3b82f6">A</div>
+          <div class="avatar" style="background:#8b5cf6">B</div>
+          <div class="avatar" style="background:#ec4899">C</div>
+          <div class="avatar" style="background:#f59e0b">D</div>
         </div>
-        <div class="stat-box">
+        <span class="proof-text">Join traders discovering their missed gains</span>
+      </div>
+
+    </div>
+
+    <!-- Stats cards floating -->
+    <div class="hero-cards">
+      <div class="hero-card card-1">
+        <div class="hcard-label">Avg. missed gains</div>
+        <div class="hcard-value">$12,400</div>
+        <div class="hcard-sub">per wallet analyzed</div>
+      </div>
+      <div class="hero-card card-2">
+        <div class="hcard-label">Most painful sell</div>
+        <div class="hcard-value">WIF</div>
+        <div class="hcard-sub">sold at $0.001 → now $2.4</div>
+      </div>
+      <div class="hero-card card-3">
+        <div class="hcard-label">Top "what if"</div>
+        <div class="hcard-value">$847K</div>
+        <div class="hcard-sub">if held BONK 6 months</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Features strip -->
+  <div class="features-strip">
+    <div class="fstrip-item">
+      <span class="fstrip-icon">🔒</span>
+      <span>Non-custodial</span>
+    </div>
+    <div class="fstrip-divider"></div>
+    <div class="fstrip-item">
+      <span class="fstrip-icon">⚡</span>
+      <span>Real-time prices</span>
+    </div>
+    <div class="fstrip-divider"></div>
+    <div class="fstrip-item">
+      <span class="fstrip-icon">🌐</span>
+      <span>All Solana wallets</span>
+    </div>
+    <div class="fstrip-divider"></div>
+    <div class="fstrip-item">
+      <span class="fstrip-icon">💾</span>
+      <span>Cached 24h</span>
+    </div>
+    <div class="fstrip-divider"></div>
+    <div class="fstrip-item">
+      <span class="fstrip-icon">🎯</span>
+      <span>100% Free</span>
+    </div>
+  </div>
+
+</section>
+
+<!-- APP SECTION -->
+<section id="app-section" class="hidden">
+  <div class="container">
+
+    <div id="loading-section">
+      <div class="loading-wrapper">
+        <div class="loading-orb">
+          <div class="orb-ring r1"></div>
+          <div class="orb-ring r2"></div>
+          <div class="orb-ring r3"></div>
+          <div class="orb-core">$</div>
+        </div>
+        <div id="loading-text">Connecting...</div>
+        <div class="loading-sub">Scanning the blockchain for your meme coin history</div>
+        <div class="loading-steps">
+          <div class="lstep active" id="lstep1">📡 Fetching transactions</div>
+          <div class="lstep" id="lstep2">🔍 Parsing trades</div>
+          <div class="lstep" id="lstep3">💰 Getting prices</div>
+          <div class="lstep" id="lstep4">📊 Calculating gains</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="results-section" class="hidden">
+
+      <!-- Results header -->
+      <div class="results-hero">
+        <div class="results-tagline">Here's your reality check 💀</div>
+        <h2 class="results-title">Your Meme Coin Report</h2>
+        <p class="results-sub">Based on your last 300 transactions</p>
+      </div>
+
+      <!-- Big stats -->
+      <div class="stats-bar">
+        <div class="stat-box sb-blue">
+          <div class="sb-icon">🪙</div>
+          <div class="stat-box-label">Meme Coins Traded</div>
+          <div class="stat-box-value" id="total-coins">—</div>
+          <div class="stat-box-sub">unique tokens</div>
+        </div>
+        <div class="stat-box sb-purple">
+          <div class="sb-icon">💼</div>
           <div class="stat-box-label">Still Holding</div>
           <div class="stat-box-value" id="still-holding">—</div>
-          <div class="stat-box-sub">Active positions</div>
+          <div class="stat-box-sub">active positions</div>
         </div>
-        <div class="stat-box">
+        <div class="stat-box sb-green">
+          <div class="sb-icon">💸</div>
           <div class="stat-box-label">Total "What If" Value</div>
-          <div class="stat-box-value green" id="total-whatif">—</div>
-          <div class="stat-box-sub">If held until today</div>
+          <div class="stat-box-value" id="total-whatif">—</div>
+          <div class="stat-box-sub">if you held until today</div>
         </div>
       </div>
-      <div class="section-label">Your Meme Coin History</div>
-      <div id="coins-list"></div>
-    </div>
-  </section>
 
-</div>
+      <div class="section-label">
+        <span class="sl-icon">📊</span>
+        Your Meme Coin History
+        <span class="sl-line"></span>
+      </div>
+
+      <div id="coins-list"></div>
+
+    </div>
+  </div>
+</section>
 
 <script src="app.js"></script>
 <script>
+// ── Particles ──
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+for (let i = 0; i < 60; i++) {
+  particles.push({
+    x: Math.random() * window.innerWidth,
+    y: Math.random() * window.innerHeight,
+    r: Math.random() * 1.5 + 0.3,
+    dx: (Math.random() - 0.5) * 0.3,
+    dy: (Math.random() - 0.5) * 0.3,
+    o: Math.random() * 0.5 + 0.1
+  });
+}
+
+function animateParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const p of particles) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(99,130,255,${p.o})`;
+    ctx.fill();
+    p.x += p.dx; p.y += p.dy;
+    if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
+    if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+  }
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// ── Wallet logic ──
 window.addEventListener('load', () => {
 
-  // ── Wallet Standard detection (catches ALL modern wallets automatically) ──
   function getStandardWallets() {
     const detected = [];
     try {
-      // Method 1: window.navigator.wallets (newer standard)
       if (window.navigator?.wallets) {
         const wallets = window.navigator.wallets.get();
         for (const w of wallets) {
@@ -145,18 +296,13 @@ window.addEventListener('load', () => {
               id: w.name.toLowerCase().replace(/\s+/g, '-'),
               name: w.name,
               iconUrl: w.icon || '',
-              isStandard: true,
-              walletObj: w,
               connect: async () => {
                 const feature = w.features['standard:connect'];
                 const res = await feature.connect();
                 return res.accounts[0]?.address;
               },
               disconnect: async () => {
-                try {
-                  const feature = w.features['standard:disconnect'];
-                  if (feature) await feature.disconnect();
-                } catch(_) {}
+                try { const f = w.features['standard:disconnect']; if (f) await f.disconnect(); } catch(_){}
               }
             });
           }
@@ -166,11 +312,9 @@ window.addEventListener('load', () => {
     return detected;
   }
 
-  // ── Manual fallbacks for wallets that may not follow standard ──
   const MANUAL_WALLETS = [
     {
-      id: 'phantom',
-      name: 'Phantom',
+      id: 'phantom', name: 'Phantom',
       iconUrl: 'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png',
       detect: () => !!(window.solana?.isPhantom),
       connect: async () => {
@@ -181,8 +325,7 @@ window.addEventListener('load', () => {
       disconnect: async () => { try { await window.solana.disconnect(); } catch(_){} }
     },
     {
-      id: 'solflare',
-      name: 'Solflare',
+      id: 'solflare', name: 'Solflare',
       iconUrl: 'https://solflare.com/favicon.ico',
       detect: () => !!window.solflare,
       connect: async () => {
@@ -193,8 +336,7 @@ window.addEventListener('load', () => {
       disconnect: async () => { try { await window.solflare.disconnect(); } catch(_){} }
     },
     {
-      id: 'backpack',
-      name: 'Backpack',
+      id: 'backpack', name: 'Backpack',
       iconUrl: 'https://backpack.app/favicon.ico',
       detect: () => !!window.backpack,
       connect: async () => {
@@ -205,8 +347,7 @@ window.addEventListener('load', () => {
       disconnect: async () => { try { await window.backpack.disconnect(); } catch(_){} }
     },
     {
-      id: 'okx',
-      name: 'OKX Wallet',
+      id: 'okx', name: 'OKX Wallet',
       iconUrl: 'https://static.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png',
       detect: () => !!window.okxwallet?.solana,
       connect: async () => {
@@ -217,8 +358,7 @@ window.addEventListener('load', () => {
       disconnect: async () => { try { await window.okxwallet.solana.disconnect(); } catch(_){} }
     },
     {
-      id: 'exodus',
-      name: 'Exodus',
+      id: 'exodus', name: 'Exodus',
       iconUrl: 'https://www.exodus.com/favicon.ico',
       detect: () => !!window.exodus?.solana,
       connect: async () => {
@@ -229,115 +369,66 @@ window.addEventListener('load', () => {
       disconnect: async () => { try { await window.exodus.solana.disconnect(); } catch(_){} }
     },
     {
-      id: 'coin98',
-      name: 'Coin98',
+      id: 'coin98', name: 'Coin98',
       iconUrl: 'https://coin98.com/favicon.ico',
       detect: () => !!window.coin98?.sol,
-      connect: async () => {
-        const res = await window.coin98.sol.connect();
-        return res.publicKey.toString();
-      },
+      connect: async () => { const res = await window.coin98.sol.connect(); return res.publicKey.toString(); },
       disconnect: async () => { try { await window.coin98.sol.disconnect(); } catch(_){} }
     },
     {
-      id: 'brave',
-      name: 'Brave Wallet',
+      id: 'brave', name: 'Brave Wallet',
       iconUrl: 'https://brave.com/favicon.ico',
-      detect: () => !!(window.braveSolana || (window.solana?.isBraveWallet)),
-      connect: async () => {
-        const w = window.braveSolana || window.solana;
-        const res = await w.connect();
-        return res.publicKey.toString();
-      },
-      disconnect: async () => {
-        const w = window.braveSolana || window.solana;
-        try { await w.disconnect(); } catch(_){}
-      }
-    },
-    {
-      id: 'mathwallet',
-      name: 'Math Wallet',
-      iconUrl: 'https://mathwallet.org/favicon.ico',
-      detect: () => !!window.solana?.isMathWallet,
-      connect: async () => {
-        const res = await window.solana.connect();
-        return res.publicKey.toString();
-      },
-      disconnect: async () => { try { await window.solana.disconnect(); } catch(_){} }
+      detect: () => !!(window.braveSolana || window.solana?.isBraveWallet),
+      connect: async () => { const w = window.braveSolana || window.solana; const res = await w.connect(); return res.publicKey.toString(); },
+      disconnect: async () => { const w = window.braveSolana || window.solana; try { await w.disconnect(); } catch(_){} }
     },
   ];
 
-  // Popular wallets to show as "install" options even if not detected
-  const POPULAR_NOT_INSTALLED = [
-    { id: 'phantom-install', name: 'Phantom', iconUrl: 'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png', installUrl: 'https://phantom.app' },
-    { id: 'solflare-install', name: 'Solflare', iconUrl: 'https://solflare.com/favicon.ico', installUrl: 'https://solflare.com' },
-    { id: 'backpack-install', name: 'Backpack', iconUrl: 'https://backpack.app/favicon.ico', installUrl: 'https://backpack.app' },
-    { id: 'okx-install', name: 'OKX Wallet', iconUrl: 'https://static.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png', installUrl: 'https://www.okx.com/web3' },
+  const INSTALL_WALLETS = [
+    { name: 'Phantom', iconUrl: 'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png', installUrl: 'https://phantom.app' },
+    { name: 'Solflare', iconUrl: 'https://solflare.com/favicon.ico', installUrl: 'https://solflare.com' },
+    { name: 'Backpack', iconUrl: 'https://backpack.app/favicon.ico', installUrl: 'https://backpack.app' },
+    { name: 'OKX Wallet', iconUrl: 'https://static.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png', installUrl: 'https://www.okx.com/web3' },
   ];
 
   let activeWallet = null;
 
-  // ── Build wallet list ──
   function buildWalletList() {
     const list = document.getElementById('wallet-list');
     list.innerHTML = '';
+    const standard = getStandardWallets();
+    const standardNames = new Set(standard.map(w => w.name.toLowerCase()));
+    const manual = MANUAL_WALLETS.filter(w => w.detect() && !standardNames.has(w.name.toLowerCase()));
+    const all = [...standard, ...manual];
 
-    // Get standard wallets
-    const standardWallets = getStandardWallets();
-    const standardIds = new Set(standardWallets.map(w => w.name.toLowerCase()));
-
-    // Get manual wallets (deduplicate against standard)
-    const manualDetected = MANUAL_WALLETS.filter(w =>
-      w.detect() && !standardIds.has(w.name.toLowerCase())
-    );
-
-    const allDetected = [...standardWallets, ...manualDetected];
-
-    if (allDetected.length > 0) {
-      const detectedLabel = document.createElement('div');
-      detectedLabel.className = 'wallet-section-label';
-      detectedLabel.textContent = `Detected (${allDetected.length})`;
-      list.appendChild(detectedLabel);
-
-      for (const wallet of allDetected) {
-        list.appendChild(buildWalletRow(wallet, true));
-      }
+    if (all.length > 0) {
+      const lbl = document.createElement('div');
+      lbl.className = 'wallet-section-label';
+      lbl.textContent = `Detected (${all.length})`;
+      list.appendChild(lbl);
+      all.forEach(w => list.appendChild(buildRow(w)));
     }
 
-    // Show popular not-installed wallets
-    const notInstalled = POPULAR_NOT_INSTALLED.filter(w =>
-      !allDetected.some(d => d.name.toLowerCase() === w.name.toLowerCase())
-    );
-
+    const notInstalled = INSTALL_WALLETS.filter(w => !all.some(d => d.name.toLowerCase() === w.name.toLowerCase()));
     if (notInstalled.length > 0) {
-      const notLabel = document.createElement('div');
-      notLabel.className = 'wallet-section-label muted';
-      notLabel.textContent = allDetected.length > 0 ? 'Get a wallet' : 'No wallets detected — install one';
-      list.appendChild(notLabel);
-
-      for (const wallet of notInstalled) {
-        list.appendChild(buildInstallRow(wallet));
-      }
-    }
-
-    if (allDetected.length === 0 && notInstalled.length === 0) {
-      list.innerHTML = '<div style="text-align:center;color:var(--text2);padding:24px;font-size:0.85rem;">No Solana wallets detected.<br/>Install Phantom or Solflare to get started.</div>';
+      const lbl = document.createElement('div');
+      lbl.className = 'wallet-section-label muted';
+      lbl.textContent = all.length > 0 ? 'Get a wallet' : 'No wallets detected';
+      list.appendChild(lbl);
+      notInstalled.forEach(w => list.appendChild(buildInstallRow(w)));
     }
   }
 
-  function buildWalletRow(wallet, isDetected) {
+  function buildRow(wallet) {
     const btn = document.createElement('button');
     btn.className = 'wallet-option';
     btn.innerHTML = `
-      <div class="wallet-icon">
-        <img src="${wallet.iconUrl}" alt="${wallet.name}" onerror="this.parentElement.innerHTML='◈'"/>
-      </div>
+      <div class="wallet-icon"><img src="${wallet.iconUrl}" onerror="this.parentElement.innerHTML='◈'" alt="${wallet.name}"/></div>
       <div class="wallet-info">
         <div class="wallet-name">${wallet.name}</div>
-        <div class="wallet-status detected">Detected · Ready to connect</div>
+        <div class="wallet-status detected">✓ Detected · Ready to connect</div>
       </div>
-      <div class="wallet-arrow">→</div>
-    `;
+      <div class="wallet-arrow">→</div>`;
     btn.addEventListener('click', () => connectWith(wallet));
     return btn;
   }
@@ -346,28 +437,24 @@ window.addEventListener('load', () => {
     const btn = document.createElement('button');
     btn.className = 'wallet-option not-installed';
     btn.innerHTML = `
-      <div class="wallet-icon">
-        <img src="${wallet.iconUrl}" alt="${wallet.name}" onerror="this.parentElement.innerHTML='◈'"/>
-      </div>
+      <div class="wallet-icon"><img src="${wallet.iconUrl}" onerror="this.parentElement.innerHTML='◈'" alt="${wallet.name}"/></div>
       <div class="wallet-info">
         <div class="wallet-name">${wallet.name}</div>
         <div class="wallet-status">Not installed · Click to install</div>
       </div>
-      <div class="wallet-arrow">↗</div>
-    `;
+      <div class="wallet-arrow">↗</div>`;
     btn.addEventListener('click', () => window.open(wallet.installUrl, '_blank'));
     return btn;
   }
 
-  // ── Connect ──
   async function connectWith(wallet) {
     closeModal();
     try {
       const address = await wallet.connect();
-      if (!address) throw new Error('No address returned');
+      if (!address) throw new Error('No address');
       activeWallet = wallet;
       onConnected(address);
-    } catch (err) {
+    } catch(err) {
       console.error(err);
       showError('Connection failed or cancelled. Please try again.');
     }
@@ -377,54 +464,57 @@ window.addEventListener('load', () => {
     document.getElementById('connect-section').classList.add('hidden');
     document.getElementById('app-section').classList.remove('hidden');
     document.getElementById('nav-wallet').classList.remove('hidden');
-    document.getElementById('wallet-address').textContent =
-      address.slice(0, 4) + '...' + address.slice(-4);
+    document.getElementById('wallet-address').textContent = address.slice(0,4)+'...'+address.slice(-4);
     analyzeWallet(address);
   }
 
-  // ── Disconnect (properly revokes permission) ──
   document.getElementById('disconnect-btn').addEventListener('click', async () => {
-    if (activeWallet) {
-      await activeWallet.disconnect();
-      activeWallet = null;
-    }
+    if (activeWallet) { await activeWallet.disconnect(); activeWallet = null; }
     document.getElementById('connect-section').classList.remove('hidden');
     document.getElementById('app-section').classList.add('hidden');
     document.getElementById('nav-wallet').classList.add('hidden');
     document.getElementById('results-section').classList.add('hidden');
     document.getElementById('loading-text').textContent = 'Connecting...';
+    resetLoadingSteps();
   });
 
-  // ── Switch Wallet (opens modal without disconnect) ──
   document.getElementById('switch-btn').addEventListener('click', () => {
     buildWalletList();
     document.getElementById('wallet-modal').classList.remove('hidden');
   });
 
-  // ── Modal ──
   document.getElementById('open-wallet-modal').addEventListener('click', () => {
     buildWalletList();
     document.getElementById('wallet-modal').classList.remove('hidden');
   });
 
   document.getElementById('modal-close').addEventListener('click', closeModal);
-  document.getElementById('wallet-modal').addEventListener('click', (e) => {
+  document.getElementById('wallet-modal').addEventListener('click', e => {
     if (e.target === document.getElementById('wallet-modal')) closeModal();
   });
 
-  function closeModal() {
-    document.getElementById('wallet-modal').classList.add('hidden');
-  }
+  function closeModal() { document.getElementById('wallet-modal').classList.add('hidden'); }
 
   function showError(msg) {
     const el = document.getElementById('error-msg');
-    el.textContent = msg;
-    el.classList.remove('hidden');
+    el.textContent = msg; el.classList.remove('hidden');
     setTimeout(() => el.classList.add('hidden'), 5000);
   }
 
+  function resetLoadingSteps() {
+    ['lstep1','lstep2','lstep3','lstep4'].forEach((id,i) => {
+      const el = document.getElementById(id);
+      el.className = 'lstep' + (i===0?' active':'');
+    });
+  }
+
+  // expose for app.js
+  window.activateLoadingStep = function(n) {
+    ['lstep1','lstep2','lstep3','lstep4'].forEach((id,i) => {
+      document.getElementById(id).className = 'lstep' + (i<n?' done':i===n?' active':'');
+    });
+  };
 });
 </script>
-
 </body>
 </html>
