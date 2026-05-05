@@ -25,6 +25,7 @@
           <div class="wallet-pill">
             <div class="wallet-dot"></div>
             <span id="wallet-address"></span>
+            <button class="switch-btn" id="switch-btn">Switch</button>
             <button class="disconnect-btn" id="disconnect-btn">Disconnect</button>
           </div>
         </div>
@@ -41,11 +42,7 @@
       <button class="modal-close" id="modal-close">✕</button>
     </div>
     <p class="modal-sub">Select your wallet to connect to MemeScope</p>
-
-    <div class="wallet-list" id="wallet-list">
-      <!-- Injected by JS -->
-    </div>
-
+    <div class="wallet-list" id="wallet-list"></div>
     <div class="modal-footer">
       🔒 Read-only access · No private keys required · Your funds stay safe
     </div>
@@ -56,24 +53,19 @@
 
   <!-- ── CONNECT SECTION ── -->
   <section id="connect-section">
-
     <div class="hero-eyebrow">
       <div class="hero-eyebrow-dot"></div>
       Solana Meme Coin Analyzer
     </div>
-
     <h1 class="hero-title">
       What if you<br/>
       <em>held longer?</em>
       <span class="line2">Find out now.</span>
     </h1>
-
     <p class="hero-sub">
       Connect your Solana wallet to analyze your full meme coin trade history and see exactly how much you left on the table — or gained.
     </p>
-
     <div id="error-msg" class="hidden"></div>
-
     <button class="connect-btn-primary" id="open-wallet-modal">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="2" y="5" width="20" height="14" rx="2"/>
@@ -81,7 +73,6 @@
       </svg>
       Connect Wallet
     </button>
-
     <div class="stats-strip">
       <div class="strip-item">
         <div class="strip-label">Wallets Supported</div>
@@ -96,7 +87,6 @@
         <div class="strip-value green">Free</div>
       </div>
     </div>
-
     <div class="features-row">
       <div class="feature-chip"><div class="feature-check">✓</div>Non-custodial</div>
       <div class="feature-chip"><div class="feature-check">✓</div>Read-only analysis</div>
@@ -104,18 +94,15 @@
       <div class="feature-chip"><div class="feature-check">✓</div>Results cached 24h</div>
       <div class="feature-chip"><div class="feature-check">✓</div>All Solana wallets</div>
     </div>
-
   </section>
 
   <!-- ── APP SECTION ── -->
   <section id="app-section" class="hidden">
-
     <div id="loading-section">
       <div class="loader-ring"></div>
       <div id="loading-text">Connecting...</div>
       <div class="loading-sub">This may take a moment for large wallets</div>
     </div>
-
     <div id="results-section" class="hidden">
       <div class="stats-bar">
         <div class="stat-box">
@@ -134,11 +121,9 @@
           <div class="stat-box-sub">If held until today</div>
         </div>
       </div>
-
       <div class="section-label">Your Meme Coin History</div>
       <div id="coins-list"></div>
     </div>
-
   </section>
 
 </div>
@@ -147,15 +132,50 @@
 <script>
 window.addEventListener('load', () => {
 
-  // ── Wallet definitions ──
-  const WALLETS = [
+  // ── Wallet Standard detection (catches ALL modern wallets automatically) ──
+  function getStandardWallets() {
+    const detected = [];
+    try {
+      // Method 1: window.navigator.wallets (newer standard)
+      if (window.navigator?.wallets) {
+        const wallets = window.navigator.wallets.get();
+        for (const w of wallets) {
+          if (w.chains?.some(c => c.startsWith('solana'))) {
+            detected.push({
+              id: w.name.toLowerCase().replace(/\s+/g, '-'),
+              name: w.name,
+              iconUrl: w.icon || '',
+              isStandard: true,
+              walletObj: w,
+              connect: async () => {
+                const feature = w.features['standard:connect'];
+                const res = await feature.connect();
+                return res.accounts[0]?.address;
+              },
+              disconnect: async () => {
+                try {
+                  const feature = w.features['standard:disconnect'];
+                  if (feature) await feature.disconnect();
+                } catch(_) {}
+              }
+            });
+          }
+        }
+      }
+    } catch(e) {}
+    return detected;
+  }
+
+  // ── Manual fallbacks for wallets that may not follow standard ──
+  const MANUAL_WALLETS = [
     {
       id: 'phantom',
       name: 'Phantom',
-      icon: 'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png',
-      detect: () => window.solana?.isPhantom,
+      iconUrl: 'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png',
+      detect: () => !!(window.solana?.isPhantom),
       connect: async () => {
-        const res = await window.solana.connect();
+        await window.solana.disconnect().catch(()=>{});
+        const res = await window.solana.connect({ onlyIfTrusted: false });
         return res.publicKey.toString();
       },
       disconnect: async () => { try { await window.solana.disconnect(); } catch(_){} }
@@ -163,9 +183,10 @@ window.addEventListener('load', () => {
     {
       id: 'solflare',
       name: 'Solflare',
-      icon: 'https://solflare.com/favicon.ico',
+      iconUrl: 'https://solflare.com/favicon.ico',
       detect: () => !!window.solflare,
       connect: async () => {
+        try { await window.solflare.disconnect(); } catch(_){}
         await window.solflare.connect();
         return window.solflare.publicKey.toString();
       },
@@ -174,90 +195,181 @@ window.addEventListener('load', () => {
     {
       id: 'backpack',
       name: 'Backpack',
-      icon: 'https://backpack.app/favicon.ico',
+      iconUrl: 'https://backpack.app/favicon.ico',
       detect: () => !!window.backpack,
       connect: async () => {
+        try { await window.backpack.disconnect(); } catch(_){}
         const res = await window.backpack.connect();
         return res.publicKey.toString();
       },
       disconnect: async () => { try { await window.backpack.disconnect(); } catch(_){} }
     },
     {
-      id: 'glow',
-      name: 'Glow',
-      icon: 'https://glow.app/favicon.ico',
-      detect: () => !!window.glow,
+      id: 'okx',
+      name: 'OKX Wallet',
+      iconUrl: 'https://static.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png',
+      detect: () => !!window.okxwallet?.solana,
       connect: async () => {
-        const res = await window.glow.connect();
+        try { await window.okxwallet.solana.disconnect(); } catch(_){}
+        const res = await window.okxwallet.solana.connect();
         return res.publicKey.toString();
       },
-      disconnect: async () => { try { await window.glow.disconnect(); } catch(_){} }
+      disconnect: async () => { try { await window.okxwallet.solana.disconnect(); } catch(_){} }
     },
     {
       id: 'exodus',
       name: 'Exodus',
-      icon: 'https://www.exodus.com/favicon.ico',
+      iconUrl: 'https://www.exodus.com/favicon.ico',
       detect: () => !!window.exodus?.solana,
       connect: async () => {
+        try { await window.exodus.solana.disconnect(); } catch(_){}
         const res = await window.exodus.solana.connect();
         return res.publicKey.toString();
       },
       disconnect: async () => { try { await window.exodus.solana.disconnect(); } catch(_){} }
     },
     {
-      id: 'coinbase',
-      name: 'Coinbase Wallet',
-      icon: 'https://www.coinbase.com/favicon.ico',
-      detect: () => !!window.coinbaseSolana,
+      id: 'coin98',
+      name: 'Coin98',
+      iconUrl: 'https://coin98.com/favicon.ico',
+      detect: () => !!window.coin98?.sol,
       connect: async () => {
-        const res = await window.coinbaseSolana.connect();
+        const res = await window.coin98.sol.connect();
         return res.publicKey.toString();
       },
-      disconnect: async () => { try { await window.coinbaseSolana.disconnect(); } catch(_){} }
+      disconnect: async () => { try { await window.coin98.sol.disconnect(); } catch(_){} }
     },
+    {
+      id: 'brave',
+      name: 'Brave Wallet',
+      iconUrl: 'https://brave.com/favicon.ico',
+      detect: () => !!(window.braveSolana || (window.solana?.isBraveWallet)),
+      connect: async () => {
+        const w = window.braveSolana || window.solana;
+        const res = await w.connect();
+        return res.publicKey.toString();
+      },
+      disconnect: async () => {
+        const w = window.braveSolana || window.solana;
+        try { await w.disconnect(); } catch(_){}
+      }
+    },
+    {
+      id: 'mathwallet',
+      name: 'Math Wallet',
+      iconUrl: 'https://mathwallet.org/favicon.ico',
+      detect: () => !!window.solana?.isMathWallet,
+      connect: async () => {
+        const res = await window.solana.connect();
+        return res.publicKey.toString();
+      },
+      disconnect: async () => { try { await window.solana.disconnect(); } catch(_){} }
+    },
+  ];
+
+  // Popular wallets to show as "install" options even if not detected
+  const POPULAR_NOT_INSTALLED = [
+    { id: 'phantom-install', name: 'Phantom', iconUrl: 'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png', installUrl: 'https://phantom.app' },
+    { id: 'solflare-install', name: 'Solflare', iconUrl: 'https://solflare.com/favicon.ico', installUrl: 'https://solflare.com' },
+    { id: 'backpack-install', name: 'Backpack', iconUrl: 'https://backpack.app/favicon.ico', installUrl: 'https://backpack.app' },
+    { id: 'okx-install', name: 'OKX Wallet', iconUrl: 'https://static.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png', installUrl: 'https://www.okx.com/web3' },
   ];
 
   let activeWallet = null;
 
-  // ── Build wallet list in modal ──
+  // ── Build wallet list ──
   function buildWalletList() {
     const list = document.getElementById('wallet-list');
     list.innerHTML = '';
-    // Detected wallets first
-    const detected = WALLETS.filter(w => w.detect());
-    const notDetected = WALLETS.filter(w => !w.detect());
-    const sorted = [...detected, ...notDetected];
 
-    for (const wallet of sorted) {
-      const isInstalled = wallet.detect();
-      const btn = document.createElement('button');
-      btn.className = 'wallet-option' + (isInstalled ? '' : ' not-installed');
-      btn.innerHTML = `
-        <div class="wallet-icon">
-          <img src="${wallet.icon}" alt="${wallet.name}" onerror="this.parentElement.textContent='◈'"/>
-        </div>
-        <div class="wallet-info">
-          <div class="wallet-name">${wallet.name}</div>
-          <div class="wallet-status ${isInstalled ? 'detected' : ''}">${isInstalled ? 'Detected · Ready to connect' : 'Not installed'}</div>
-        </div>
-        <div class="wallet-arrow">${isInstalled ? '→' : ''}</div>
-      `;
-      if (isInstalled) {
-        btn.addEventListener('click', () => connectWalletById(wallet));
+    // Get standard wallets
+    const standardWallets = getStandardWallets();
+    const standardIds = new Set(standardWallets.map(w => w.name.toLowerCase()));
+
+    // Get manual wallets (deduplicate against standard)
+    const manualDetected = MANUAL_WALLETS.filter(w =>
+      w.detect() && !standardIds.has(w.name.toLowerCase())
+    );
+
+    const allDetected = [...standardWallets, ...manualDetected];
+
+    if (allDetected.length > 0) {
+      const detectedLabel = document.createElement('div');
+      detectedLabel.className = 'wallet-section-label';
+      detectedLabel.textContent = `Detected (${allDetected.length})`;
+      list.appendChild(detectedLabel);
+
+      for (const wallet of allDetected) {
+        list.appendChild(buildWalletRow(wallet, true));
       }
-      list.appendChild(btn);
+    }
+
+    // Show popular not-installed wallets
+    const notInstalled = POPULAR_NOT_INSTALLED.filter(w =>
+      !allDetected.some(d => d.name.toLowerCase() === w.name.toLowerCase())
+    );
+
+    if (notInstalled.length > 0) {
+      const notLabel = document.createElement('div');
+      notLabel.className = 'wallet-section-label muted';
+      notLabel.textContent = allDetected.length > 0 ? 'Get a wallet' : 'No wallets detected — install one';
+      list.appendChild(notLabel);
+
+      for (const wallet of notInstalled) {
+        list.appendChild(buildInstallRow(wallet));
+      }
+    }
+
+    if (allDetected.length === 0 && notInstalled.length === 0) {
+      list.innerHTML = '<div style="text-align:center;color:var(--text2);padding:24px;font-size:0.85rem;">No Solana wallets detected.<br/>Install Phantom or Solflare to get started.</div>';
     }
   }
 
+  function buildWalletRow(wallet, isDetected) {
+    const btn = document.createElement('button');
+    btn.className = 'wallet-option';
+    btn.innerHTML = `
+      <div class="wallet-icon">
+        <img src="${wallet.iconUrl}" alt="${wallet.name}" onerror="this.parentElement.innerHTML='◈'"/>
+      </div>
+      <div class="wallet-info">
+        <div class="wallet-name">${wallet.name}</div>
+        <div class="wallet-status detected">Detected · Ready to connect</div>
+      </div>
+      <div class="wallet-arrow">→</div>
+    `;
+    btn.addEventListener('click', () => connectWith(wallet));
+    return btn;
+  }
+
+  function buildInstallRow(wallet) {
+    const btn = document.createElement('button');
+    btn.className = 'wallet-option not-installed';
+    btn.innerHTML = `
+      <div class="wallet-icon">
+        <img src="${wallet.iconUrl}" alt="${wallet.name}" onerror="this.parentElement.innerHTML='◈'"/>
+      </div>
+      <div class="wallet-info">
+        <div class="wallet-name">${wallet.name}</div>
+        <div class="wallet-status">Not installed · Click to install</div>
+      </div>
+      <div class="wallet-arrow">↗</div>
+    `;
+    btn.addEventListener('click', () => window.open(wallet.installUrl, '_blank'));
+    return btn;
+  }
+
   // ── Connect ──
-  async function connectWalletById(wallet) {
+  async function connectWith(wallet) {
     closeModal();
     try {
       const address = await wallet.connect();
+      if (!address) throw new Error('No address returned');
       activeWallet = wallet;
       onConnected(address);
     } catch (err) {
-      showError('Connection cancelled or failed. Please try again.');
+      console.error(err);
+      showError('Connection failed or cancelled. Please try again.');
     }
   }
 
@@ -270,17 +382,26 @@ window.addEventListener('load', () => {
     analyzeWallet(address);
   }
 
-  // ── Disconnect ──
+  // ── Disconnect (properly revokes permission) ──
   document.getElementById('disconnect-btn').addEventListener('click', async () => {
-    if (activeWallet) await activeWallet.disconnect();
-    activeWallet = null;
+    if (activeWallet) {
+      await activeWallet.disconnect();
+      activeWallet = null;
+    }
     document.getElementById('connect-section').classList.remove('hidden');
     document.getElementById('app-section').classList.add('hidden');
     document.getElementById('nav-wallet').classList.add('hidden');
     document.getElementById('results-section').classList.add('hidden');
+    document.getElementById('loading-text').textContent = 'Connecting...';
   });
 
-  // ── Modal open/close ──
+  // ── Switch Wallet (opens modal without disconnect) ──
+  document.getElementById('switch-btn').addEventListener('click', () => {
+    buildWalletList();
+    document.getElementById('wallet-modal').classList.remove('hidden');
+  });
+
+  // ── Modal ──
   document.getElementById('open-wallet-modal').addEventListener('click', () => {
     buildWalletList();
     document.getElementById('wallet-modal').classList.remove('hidden');
@@ -301,6 +422,7 @@ window.addEventListener('load', () => {
     el.classList.remove('hidden');
     setTimeout(() => el.classList.add('hidden'), 5000);
   }
+
 });
 </script>
 
