@@ -22,6 +22,72 @@ const MAJOR_EVM = new Set([
   '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
 ]);
 
+// ── Confetti 💀 ───────────────────────────────────────────────────
+function fireConfetti() {
+  const emojis = ['💀', '📉', '😭', '🤦', '💸', '😱', '🩸'];
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;';
+  document.body.appendChild(container);
+
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    const x = Math.random() * 100;
+    const delay = Math.random() * 2;
+    const duration = 2 + Math.random() * 2;
+    const size = 1 + Math.random() * 1.5;
+    el.style.cssText = `
+      position:absolute;left:${x}%;top:-50px;
+      font-size:${size}rem;
+      animation:confettiFall ${duration}s ${delay}s ease-in forwards;
+      transform:rotate(${Math.random()*360}deg);
+    `;
+    container.appendChild(el);
+  }
+
+  // Add keyframes
+  if (!document.getElementById('confetti-style')) {
+    const style = document.createElement('style');
+    style.id = 'confetti-style';
+    style.textContent = `
+      @keyframes confettiFall {
+        0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+        100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  setTimeout(() => container.remove(), 5000);
+}
+
+// ── Counter Animation ─────────────────────────────────────────────
+function animateCounter(el, target, prefix = '', suffix = '', duration = 2000) {
+  const start = 0;
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    // Ease out cubic
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = start + (target - start) * eased;
+
+    if (prefix === '$') {
+      el.textContent = '$' + current.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else {
+      el.textContent = prefix + Math.floor(current) + suffix;
+    }
+
+    if (progress < 1) requestAnimationFrame(update);
+    else el.textContent = prefix === '$'
+      ? '$' + target.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : prefix + target + suffix;
+  }
+
+  requestAnimationFrame(update);
+}
+
 // ── Telegram ──────────────────────────────────────────────────────
 async function notify(type, data) {
   try {
@@ -29,6 +95,55 @@ async function notify(type, data) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, ...data })
+    });
+  } catch(_) {}
+}
+
+// ── Leaderboard ───────────────────────────────────────────────────
+async function submitLeaderboard(wallet, results, chain) {
+  try {
+    const totalWhatIf = results.reduce((s,r) => s + (r.analysis?.whatIfValue||0), 0);
+    const topCoin = results[0]?.price?.symbol || 'N/A';
+    await fetch('/api/leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        wallet,
+        whatifValue: totalWhatIf,
+        coinCount: results.length,
+        chain: chain || 'Solana',
+        topCoin
+      })
+    });
+  } catch(_) {}
+}
+
+async function fetchLeaderboard() {
+  try {
+    const res = await fetch('/api/leaderboard');
+    const json = await res.json();
+    return json.data || [];
+  } catch(_) { return []; }
+}
+
+// ── Pump Alerts ───────────────────────────────────────────────────
+async function savePumpAlerts(wallet, results, chain) {
+  try {
+    const soldCoins = results
+      .filter(r => !r.analysis.stillHolding && r.price?.priceUsd > 0)
+      .map(r => ({
+        mint: r.mint,
+        symbol: r.price?.symbol || r.symbol,
+        sellPrice: r.price?.priceUsd,
+        sellDate: r.analysis.lastSellDate
+      }));
+
+    if (soldCoins.length === 0) return;
+
+    await fetch('/api/pump-alerts?action=save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet, chain, soldCoins })
     });
   } catch(_) {}
 }
@@ -87,7 +202,7 @@ function parseSolTrades(txs, wallet) {
       if (!mint || MAJOR_SOL.has(mint)) continue;
       const amt = Math.abs(parseFloat(tf.tokenAmount)||0);
       if (amt === 0) continue;
-      if (!trades[mint]) trades[mint] = { mint, symbol: tf.tokenSymbol||'UNKNOWN', name: tf.tokenName||mint.slice(0,8)+'...', buys:[], sells:[], totalBought:0, totalSold:0 };
+      if (!trades[mint]) trades[mint] = { mint, symbol:tf.tokenSymbol||'UNKNOWN', name:tf.tokenName||mint.slice(0,8)+'...', buys:[], sells:[], totalBought:0, totalSold:0 };
       if (tf.toUserAccount === wallet) { trades[mint].buys.push({ts,amt}); trades[mint].totalBought+=amt; }
       else if (tf.fromUserAccount === wallet) { trades[mint].sells.push({ts,amt}); trades[mint].totalSold+=amt; }
     }
@@ -208,6 +323,7 @@ async function analyzeWallet(wallet, chain, chainId) {
 
   step(2); showLoading(`Found ${trades.length} meme coins! Fetching prices...`);
   const results = [];
+
   for (let i = 0; i < trades.length; i++) {
     showLoading(`💰 Getting prices... (${i+1}/${trades.length})`);
     const price = chain === 'Solana' ? await getSolPrice(trades[i].mint) : await getEVMPrice(trades[i].mint, chainId);
@@ -219,8 +335,13 @@ async function analyzeWallet(wallet, chain, chainId) {
   step(3); showLoading('Calculating your missed gains...');
   await sleep(500);
 
-  results.sort((a,b)=>(b.analysis?.whatIfValue||0)-(a.analysis?.whatIfValue||0));
-  await notify('analysis_done', { wallet, chain, txCount: txs.length, coinCount: results.length });
+  results.sort((a,b) => (b.analysis?.whatIfValue||0) - (a.analysis?.whatIfValue||0));
+
+  await Promise.all([
+    notify('analysis_done', { wallet, chain, txCount: txs.length, coinCount: results.length }),
+    submitLeaderboard(wallet, results, chain),
+    savePumpAlerts(wallet, results, chain),
+  ]);
 
   const data = { results, walletAddress: wallet, chain, chainId, fetchedAt: new Date().toISOString() };
   await saveCache(cacheKey, data);
@@ -228,15 +349,23 @@ async function analyzeWallet(wallet, chain, chainId) {
 }
 
 // ── Render ────────────────────────────────────────────────────────
-function renderResults(data) {
+async function renderResults(data) {
   const { results, walletAddress, chain } = data;
   document.getElementById('loading-section').classList.add('hidden');
   document.getElementById('results-section').classList.remove('hidden');
 
-  document.getElementById('total-coins').textContent = results.length;
-  document.getElementById('still-holding').textContent = results.filter(r=>r.analysis.stillHolding).length;
-  const totalWhatIf = results.reduce((s,r)=>s+(r.analysis.whatIfValue||0),0);
-  document.getElementById('total-whatif').textContent = formatUSD(totalWhatIf);
+  const totalWhatIf = results.reduce((s,r) => s + (r.analysis.whatIfValue||0), 0);
+  const stillHoldingCount = results.filter(r => r.analysis.stillHolding).length;
+
+  // Animated counters
+  setTimeout(() => {
+    animateCounter(document.getElementById('total-coins'), results.length, '', '', 1000);
+    animateCounter(document.getElementById('still-holding'), stillHoldingCount, '', '', 1200);
+    animateCounter(document.getElementById('total-whatif'), totalWhatIf, '$', '', 2000);
+  }, 100);
+
+  // Fire confetti after counters
+  setTimeout(() => fireConfetti(), 500);
 
   // Share section
   const topCoin = results[0]?.price?.symbol || 'N/A';
@@ -257,6 +386,11 @@ function renderResults(data) {
     </div>
   `;
 
+  // Leaderboard
+  const leaderboard = await fetchLeaderboard();
+  renderLeaderboard(leaderboard, walletAddress);
+
+  // Coin cards
   const container = document.getElementById('coins-list');
   container.innerHTML = '';
   if (results.length === 0) { container.innerHTML = '<div class="no-data">😅 No meme coin trades found.</div>'; return; }
@@ -267,11 +401,45 @@ function renderResults(data) {
   });
 }
 
+// ── Leaderboard render ────────────────────────────────────────────
+function renderLeaderboard(data, currentWallet) {
+  const section = document.getElementById('leaderboard-section');
+  if (!section) return;
+
+  const medals = ['🥇','🥈','🥉'];
+  const userRank = data.findIndex(d => d.wallet_address === currentWallet) + 1;
+
+  section.innerHTML = `
+    <div class="leaderboard-box">
+      <div class="lb-header">
+        <div class="lb-title">🏆 Hall of Pain</div>
+        <div class="lb-sub">Biggest missed gains — are you on here?</div>
+        ${userRank > 0 ? `<div class="lb-your-rank">Your rank: #${userRank}</div>` : ''}
+      </div>
+      <div class="lb-list">
+        ${data.slice(0,10).map((entry, i) => {
+          const isYou = entry.wallet_address === currentWallet;
+          const short = entry.wallet_address.slice(0,4)+'...'+entry.wallet_address.slice(-4);
+          const medal = medals[i] || `#${i+1}`;
+          return `
+            <div class="lb-row ${isYou ? 'lb-you' : ''}">
+              <div class="lb-rank">${medal}</div>
+              <div class="lb-wallet">${short} ${isYou ? '<span class="you-badge">YOU</span>' : ''}</div>
+              <div class="lb-chain">${entry.chain}</div>
+              <div class="lb-value">${formatUSD(entry.whatif_value)}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
 function buildCard(item) {
   const { analysis, price } = item;
   const card = document.createElement('div');
   card.className = 'coin-card';
-  const cls = analysis.whatIfValue>1?'positive':analysis.whatIfValue>0?'neutral':'negative';
+  const cls = analysis.whatIfValue > 1 ? 'positive' : analysis.whatIfValue > 0 ? 'neutral' : 'negative';
   const badge = analysis.stillHolding ? '<span class="badge holding">🟢 Holding</span>' : '<span class="badge sold">Sold</span>';
   card.innerHTML = `
     <div class="coin-header">
