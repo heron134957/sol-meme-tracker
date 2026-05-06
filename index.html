@@ -4,33 +4,33 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MemeScope — Did You Miss Being a Millionaire?</title>
-  <meta name="description" content="Connect your Solana wallet. See exactly how much you left on the table." />
+  <meta name="description" content="Connect your wallet. See exactly how much you left on the table." />
   <link rel="stylesheet" href="style.css" />
-  <script>window.ENV_HELIUS_API_KEY = '35969944-0121-4b82-a105-e622adfe38b8';</script>
+  <script>
+    window.ENV_HELIUS_API_KEY = '35969944-0121-4b82-a105-e622adfe38b8';
+    window.ENV_MORALIS_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImQzOGVjNmVjLTlkNmEtNDMwNS1hMjIzLWRhY2UwYzU5NmU3NCIsIm9yZ0lkIjoiNTE0NDM4IiwidXNlcklkIjoiNTI5MzY4IiwidHlwZUlkIjoiNzMwOTk1ZmItNGY2Ni00OGM1LWFhNTQtMDU1ZWM1OTJlNTczIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3NzgwNDkyOTksImV4cCI6NDkzMzgwOTI5OX0.jBTDtiKy3fKy_40tr5rONVMDaN99q7m-1sx9eEOaZic';
+  </script>
 </head>
 <body>
 
-<!-- PARTICLE CANVAS -->
 <canvas id="particles"></canvas>
 
-<!-- NAV -->
 <nav>
-  <div class="container">
-    <div class="nav-inner">
-      <div class="logo">
-        <div class="logo-mark">
-          <span class="logo-ring"></span>
-          <span class="logo-dollar">$</span>
-        </div>
-        <span class="logo-text">Meme<em>Scope</em></span>
+  <div class="nav-inner">
+    <div class="logo">
+      <div class="logo-mark">
+        <span class="logo-ring"></span>
+        <span class="logo-dollar">$</span>
       </div>
-      <div id="nav-wallet" class="hidden">
-        <div class="wallet-pill">
-          <span class="live-dot"></span>
-          <span id="wallet-address"></span>
-          <button class="switch-btn" id="switch-btn">Switch</button>
-          <button class="disconnect-btn" id="disconnect-btn">✕</button>
-        </div>
+      <span class="logo-text">Meme<em>Scope</em></span>
+    </div>
+    <div id="nav-wallet" class="hidden">
+      <div class="wallet-pill">
+        <span class="live-dot"></span>
+        <span id="wallet-address"></span>
+        <span id="nav-chain-badge" class="chain-badge"></span>
+        <button class="switch-btn" id="switch-btn">Switch</button>
+        <button class="disconnect-btn" id="disconnect-btn">✕</button>
       </div>
     </div>
   </div>
@@ -43,7 +43,14 @@
       <div class="modal-title">Connect Wallet</div>
       <button class="modal-close" id="modal-close">✕</button>
     </div>
-    <p class="modal-sub">Select your wallet — all Solana wallets supported</p>
+    <p class="modal-sub">Select your chain and wallet</p>
+    <div class="chain-selector" id="chain-selector">
+      <button class="chain-opt active" data-chain="Solana" data-chainid="">◎ Solana</button>
+      <button class="chain-opt" data-chain="Ethereum" data-chainid="0x1">⟠ Ethereum</button>
+      <button class="chain-opt" data-chain="BSC" data-chainid="0x38">🟡 BSC</button>
+      <button class="chain-opt" data-chain="Polygon" data-chainid="0x89">⬟ Polygon</button>
+      <button class="chain-opt" data-chain="Base" data-chainid="0x2105">🔵 Base</button>
+    </div>
     <div class="wallet-list" id="wallet-list"></div>
     <div class="modal-footer">🔒 Read-only · No private keys · Funds stay safe</div>
   </div>
@@ -52,8 +59,6 @@
 <!-- HERO -->
 <section id="connect-section">
   <div class="hero-container">
-
-    <!-- Floating money emojis -->
     <div class="floaters">
       <span class="floater" style="--d:0s;--x:10%;--size:2rem">💎</span>
       <span class="floater" style="--d:1s;--x:80%;--size:1.5rem">🚀</span>
@@ -65,7 +70,6 @@
       <span class="floater" style="--d:0.8s;--x:5%;--size:1.8rem">💸</span>
     </div>
 
-    <!-- Live ticker -->
     <div class="ticker-wrap">
       <div class="ticker">
         <span>BONK +420%</span><span class="sep">•</span>
@@ -74,20 +78,19 @@
         <span>MOODENG +650%</span><span class="sep">•</span>
         <span>GOAT +3000%</span><span class="sep">•</span>
         <span>PNUT +900%</span><span class="sep">•</span>
+        <span>PEPE +2000%</span><span class="sep">•</span>
+        <span>SHIB +500%</span><span class="sep">•</span>
         <span>BONK +420%</span><span class="sep">•</span>
         <span>WIF +1200%</span><span class="sep">•</span>
         <span>POPCAT +800%</span><span class="sep">•</span>
-        <span>MOODENG +650%</span><span class="sep">•</span>
-        <span>GOAT +3000%</span><span class="sep">•</span>
-        <span>PNUT +900%</span>
+        <span>GOAT +3000%</span>
       </div>
     </div>
 
     <div class="hero-content">
-
       <div class="hero-badge">
         <span class="badge-dot"></span>
-        SOLANA MEME COIN ANALYZER
+        Multi-Chain Meme Coin Analyzer
       </div>
 
       <h1 class="hero-title">
@@ -100,7 +103,7 @@
       </h1>
 
       <p class="hero-sub">
-        Connect your wallet. We'll show you <strong>exactly</strong> how much you left on the table by selling your meme coins too early. 
+        Connect your wallet. We'll show you <strong>exactly</strong> how much you left on the table by selling your meme coins too early.
         <span class="sub-warning">Warning: this might hurt. 💀</span>
       </p>
 
@@ -122,15 +125,13 @@
         </div>
         <span class="proof-text">Join traders discovering their missed gains</span>
       </div>
-
     </div>
 
-    <!-- Stats cards floating -->
     <div class="hero-cards">
       <div class="hero-card card-1">
-        <div class="hcard-label">Avg. missed gains</div>
-        <div class="hcard-value">$12,400</div>
-        <div class="hcard-sub">per wallet analyzed</div>
+        <div class="hcard-label">Chains supported</div>
+        <div class="hcard-value">5+</div>
+        <div class="hcard-sub">SOL, ETH, BSC, Polygon, Base</div>
       </div>
       <div class="hero-card card-2">
         <div class="hcard-label">Most painful sell</div>
@@ -143,37 +144,19 @@
         <div class="hcard-sub">if held BONK 6 months</div>
       </div>
     </div>
-
   </div>
 
-  <!-- Features strip -->
   <div class="features-strip">
-    <div class="fstrip-item">
-      <span class="fstrip-icon">🔒</span>
-      <span>Non-custodial</span>
-    </div>
+    <div class="fstrip-item"><span class="fstrip-icon">🔒</span><span>Non-custodial</span></div>
     <div class="fstrip-divider"></div>
-    <div class="fstrip-item">
-      <span class="fstrip-icon">⚡</span>
-      <span>Real-time prices</span>
-    </div>
+    <div class="fstrip-item"><span class="fstrip-icon">⚡</span><span>Real-time prices</span></div>
     <div class="fstrip-divider"></div>
-    <div class="fstrip-item">
-      <span class="fstrip-icon">🌐</span>
-      <span>All Solana wallets</span>
-    </div>
+    <div class="fstrip-item"><span class="fstrip-icon">🌐</span><span>5+ chains supported</span></div>
     <div class="fstrip-divider"></div>
-    <div class="fstrip-item">
-      <span class="fstrip-icon">💾</span>
-      <span>Cached 24h</span>
-    </div>
+    <div class="fstrip-item"><span class="fstrip-icon">💾</span><span>Cached 24h</span></div>
     <div class="fstrip-divider"></div>
-    <div class="fstrip-item">
-      <span class="fstrip-icon">🎯</span>
-      <span>100% Free</span>
-    </div>
+    <div class="fstrip-item"><span class="fstrip-icon">🎯</span><span>100% Free</span></div>
   </div>
-
 </section>
 
 <!-- APP SECTION -->
@@ -200,15 +183,12 @@
     </div>
 
     <div id="results-section" class="hidden">
-
-      <!-- Results header -->
       <div class="results-hero">
         <div class="results-tagline">Here's your reality check 💀</div>
         <h2 class="results-title">Your Meme Coin Report</h2>
         <p class="results-sub">Based on your last 300 transactions</p>
       </div>
 
-      <!-- Big stats -->
       <div class="stats-bar">
         <div class="stat-box sb-blue">
           <div class="sb-icon">🪙</div>
@@ -230,6 +210,9 @@
         </div>
       </div>
 
+      <!-- Share Box -->
+      <div id="share-section"></div>
+
       <div class="section-label">
         <span class="sl-icon">📊</span>
         Your Meme Coin History
@@ -237,54 +220,69 @@
       </div>
 
       <div id="coins-list"></div>
-
     </div>
+
   </div>
 </section>
 
 <script src="app.js"></script>
 <script>
-// ── Particles ──
+// Particles
 const canvas = document.getElementById('particles');
 const ctx = canvas.getContext('2d');
 let particles = [];
-
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
-
 for (let i = 0; i < 60; i++) {
-  particles.push({
-    x: Math.random() * window.innerWidth,
-    y: Math.random() * window.innerHeight,
-    r: Math.random() * 1.5 + 0.3,
-    dx: (Math.random() - 0.5) * 0.3,
-    dy: (Math.random() - 0.5) * 0.3,
-    o: Math.random() * 0.5 + 0.1
-  });
+  particles.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, r: Math.random()*1.5+0.3, dx: (Math.random()-0.5)*0.3, dy: (Math.random()-0.5)*0.3, o: Math.random()*0.4+0.1 });
 }
-
 function animateParticles() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
   for (const p of particles) {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(99,130,255,${p.o})`;
-    ctx.fill();
-    p.x += p.dx; p.y += p.dy;
-    if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
-    if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(99,130,255,${p.o})`; ctx.fill();
+    p.x+=p.dx; p.y+=p.dy;
+    if(p.x<0||p.x>canvas.width) p.dx*=-1;
+    if(p.y<0||p.y>canvas.height) p.dy*=-1;
   }
   requestAnimationFrame(animateParticles);
 }
 animateParticles();
 
-// ── Wallet logic ──
 window.addEventListener('load', () => {
+  let selectedChain = 'Solana';
+  let selectedChainId = '';
+  let activeWallet = null;
 
+  // Chain selector
+  document.querySelectorAll('.chain-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.chain-opt').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedChain = btn.dataset.chain;
+      selectedChainId = btn.dataset.chainid;
+      buildWalletList();
+    });
+  });
+
+  // EVM wallet (MetaMask)
+  const EVM_WALLET = {
+    id: 'metamask', name: 'MetaMask',
+    iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg',
+    detect: () => !!window.ethereum,
+    connect: async (chainId) => {
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (chainId) {
+        try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId }] }); } catch(e) {}
+      }
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      return accounts[0];
+    },
+    disconnect: async () => {}
+  };
+
+  // Solana wallet standard detection
   function getStandardWallets() {
     const detected = [];
     try {
@@ -293,16 +291,15 @@ window.addEventListener('load', () => {
         for (const w of wallets) {
           if (w.chains?.some(c => c.startsWith('solana'))) {
             detected.push({
-              id: w.name.toLowerCase().replace(/\s+/g, '-'),
-              name: w.name,
-              iconUrl: w.icon || '',
+              id: w.name.toLowerCase().replace(/\s+/g,'-'),
+              name: w.name, iconUrl: w.icon || '',
               connect: async () => {
-                const feature = w.features['standard:connect'];
-                const res = await feature.connect();
+                const f = w.features['standard:connect'];
+                const res = await f.connect();
                 return res.accounts[0]?.address;
               },
               disconnect: async () => {
-                try { const f = w.features['standard:disconnect']; if (f) await f.disconnect(); } catch(_){}
+                try { const f = w.features['standard:disconnect']; if(f) await f.disconnect(); } catch(_){}
               }
             });
           }
@@ -314,91 +311,88 @@ window.addEventListener('load', () => {
 
   const MANUAL_WALLETS = [
     {
-      id: 'phantom', name: 'Phantom',
-      iconUrl: 'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png',
-      detect: () => !!(window.solana?.isPhantom),
-      connect: async () => {
-        await window.solana.disconnect().catch(()=>{});
-        const res = await window.solana.connect({ onlyIfTrusted: false });
-        return res.publicKey.toString();
-      },
-      disconnect: async () => { try { await window.solana.disconnect(); } catch(_){} }
+      id:'phantom', name:'Phantom',
+      iconUrl:'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png',
+      detect:()=>!!(window.solana?.isPhantom),
+      connect: async()=>{ await window.solana.disconnect().catch(()=>{}); const r=await window.solana.connect({onlyIfTrusted:false}); return r.publicKey.toString(); },
+      disconnect: async()=>{ try{await window.solana.disconnect();}catch(_){} }
     },
     {
-      id: 'solflare', name: 'Solflare',
-      iconUrl: 'https://solflare.com/favicon.ico',
-      detect: () => !!window.solflare,
-      connect: async () => {
-        try { await window.solflare.disconnect(); } catch(_){}
-        await window.solflare.connect();
-        return window.solflare.publicKey.toString();
-      },
-      disconnect: async () => { try { await window.solflare.disconnect(); } catch(_){} }
+      id:'solflare', name:'Solflare',
+      iconUrl:'https://solflare.com/favicon.ico',
+      detect:()=>!!window.solflare,
+      connect: async()=>{ try{await window.solflare.disconnect();}catch(_){} await window.solflare.connect(); return window.solflare.publicKey.toString(); },
+      disconnect: async()=>{ try{await window.solflare.disconnect();}catch(_){} }
     },
     {
-      id: 'backpack', name: 'Backpack',
-      iconUrl: 'https://backpack.app/favicon.ico',
-      detect: () => !!window.backpack,
-      connect: async () => {
-        try { await window.backpack.disconnect(); } catch(_){}
-        const res = await window.backpack.connect();
-        return res.publicKey.toString();
-      },
-      disconnect: async () => { try { await window.backpack.disconnect(); } catch(_){} }
+      id:'backpack', name:'Backpack',
+      iconUrl:'https://backpack.app/favicon.ico',
+      detect:()=>!!window.backpack,
+      connect: async()=>{ try{await window.backpack.disconnect();}catch(_){} const r=await window.backpack.connect(); return r.publicKey.toString(); },
+      disconnect: async()=>{ try{await window.backpack.disconnect();}catch(_){} }
     },
     {
-      id: 'okx', name: 'OKX Wallet',
-      iconUrl: 'https://static.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png',
-      detect: () => !!window.okxwallet?.solana,
-      connect: async () => {
-        try { await window.okxwallet.solana.disconnect(); } catch(_){}
-        const res = await window.okxwallet.solana.connect();
-        return res.publicKey.toString();
-      },
-      disconnect: async () => { try { await window.okxwallet.solana.disconnect(); } catch(_){} }
+      id:'okx', name:'OKX Wallet',
+      iconUrl:'https://static.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png',
+      detect:()=>!!window.okxwallet?.solana,
+      connect: async()=>{ try{await window.okxwallet.solana.disconnect();}catch(_){} const r=await window.okxwallet.solana.connect(); return r.publicKey.toString(); },
+      disconnect: async()=>{ try{await window.okxwallet.solana.disconnect();}catch(_){} }
     },
     {
-      id: 'exodus', name: 'Exodus',
-      iconUrl: 'https://www.exodus.com/favicon.ico',
-      detect: () => !!window.exodus?.solana,
-      connect: async () => {
-        try { await window.exodus.solana.disconnect(); } catch(_){}
-        const res = await window.exodus.solana.connect();
-        return res.publicKey.toString();
-      },
-      disconnect: async () => { try { await window.exodus.solana.disconnect(); } catch(_){} }
+      id:'exodus', name:'Exodus',
+      iconUrl:'https://www.exodus.com/favicon.ico',
+      detect:()=>!!window.exodus?.solana,
+      connect: async()=>{ try{await window.exodus.solana.disconnect();}catch(_){} const r=await window.exodus.solana.connect(); return r.publicKey.toString(); },
+      disconnect: async()=>{ try{await window.exodus.solana.disconnect();}catch(_){} }
     },
     {
-      id: 'coin98', name: 'Coin98',
-      iconUrl: 'https://coin98.com/favicon.ico',
-      detect: () => !!window.coin98?.sol,
-      connect: async () => { const res = await window.coin98.sol.connect(); return res.publicKey.toString(); },
-      disconnect: async () => { try { await window.coin98.sol.disconnect(); } catch(_){} }
+      id:'coin98', name:'Coin98',
+      iconUrl:'https://coin98.com/favicon.ico',
+      detect:()=>!!window.coin98?.sol,
+      connect: async()=>{ const r=await window.coin98.sol.connect(); return r.publicKey.toString(); },
+      disconnect: async()=>{ try{await window.coin98.sol.disconnect();}catch(_){} }
     },
     {
-      id: 'brave', name: 'Brave Wallet',
-      iconUrl: 'https://brave.com/favicon.ico',
-      detect: () => !!(window.braveSolana || window.solana?.isBraveWallet),
-      connect: async () => { const w = window.braveSolana || window.solana; const res = await w.connect(); return res.publicKey.toString(); },
-      disconnect: async () => { const w = window.braveSolana || window.solana; try { await w.disconnect(); } catch(_){} }
+      id:'brave', name:'Brave Wallet',
+      iconUrl:'https://brave.com/favicon.ico',
+      detect:()=>!!(window.braveSolana||window.solana?.isBraveWallet),
+      connect: async()=>{ const w=window.braveSolana||window.solana; const r=await w.connect(); return r.publicKey.toString(); },
+      disconnect: async()=>{ const w=window.braveSolana||window.solana; try{await w.disconnect();}catch(_){} }
     },
   ];
 
   const INSTALL_WALLETS = [
-    { name: 'Phantom', iconUrl: 'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png', installUrl: 'https://phantom.app' },
-    { name: 'Solflare', iconUrl: 'https://solflare.com/favicon.ico', installUrl: 'https://solflare.com' },
-    { name: 'Backpack', iconUrl: 'https://backpack.app/favicon.ico', installUrl: 'https://backpack.app' },
-    { name: 'OKX Wallet', iconUrl: 'https://static.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png', installUrl: 'https://www.okx.com/web3' },
+    { name:'Phantom', iconUrl:'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png', installUrl:'https://phantom.app' },
+    { name:'Solflare', iconUrl:'https://solflare.com/favicon.ico', installUrl:'https://solflare.com' },
+    { name:'Backpack', iconUrl:'https://backpack.app/favicon.ico', installUrl:'https://backpack.app' },
+    { name:'OKX Wallet', iconUrl:'https://static.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png', installUrl:'https://www.okx.com/web3' },
   ];
-
-  let activeWallet = null;
 
   function buildWalletList() {
     const list = document.getElementById('wallet-list');
     list.innerHTML = '';
+
+    if (selectedChain !== 'Solana') {
+      const lbl = document.createElement('div');
+      lbl.className = 'wallet-section-label';
+      lbl.textContent = 'EVM Wallets';
+      list.appendChild(lbl);
+
+      if (EVM_WALLET.detect()) {
+        list.appendChild(buildRow({ ...EVM_WALLET, connect: () => EVM_WALLET.connect(selectedChainId) }));
+      } else {
+        const btn = document.createElement('button');
+        btn.className = 'wallet-option not-installed';
+        btn.innerHTML = `<div class="wallet-icon"><img src="${EVM_WALLET.iconUrl}" alt="MetaMask"/></div><div class="wallet-info"><div class="wallet-name">MetaMask</div><div class="wallet-status">Not installed · Click to install</div></div><div class="wallet-arrow">↗</div>`;
+        btn.addEventListener('click', () => window.open('https://metamask.io','_blank'));
+        list.appendChild(btn);
+      }
+      return;
+    }
+
     const standard = getStandardWallets();
-    const standardNames = new Set(standard.map(w => w.name.toLowerCase()));
-    const manual = MANUAL_WALLETS.filter(w => w.detect() && !standardNames.has(w.name.toLowerCase()));
+    const standardNames = new Set(standard.map(w=>w.name.toLowerCase()));
+    const manual = MANUAL_WALLETS.filter(w=>w.detect()&&!standardNames.has(w.name.toLowerCase()));
     const all = [...standard, ...manual];
 
     if (all.length > 0) {
@@ -409,7 +403,7 @@ window.addEventListener('load', () => {
       all.forEach(w => list.appendChild(buildRow(w)));
     }
 
-    const notInstalled = INSTALL_WALLETS.filter(w => !all.some(d => d.name.toLowerCase() === w.name.toLowerCase()));
+    const notInstalled = INSTALL_WALLETS.filter(w=>!all.some(d=>d.name.toLowerCase()===w.name.toLowerCase()));
     if (notInstalled.length > 0) {
       const lbl = document.createElement('div');
       lbl.className = 'wallet-section-label muted';
@@ -422,13 +416,7 @@ window.addEventListener('load', () => {
   function buildRow(wallet) {
     const btn = document.createElement('button');
     btn.className = 'wallet-option';
-    btn.innerHTML = `
-      <div class="wallet-icon"><img src="${wallet.iconUrl}" onerror="this.parentElement.innerHTML='◈'" alt="${wallet.name}"/></div>
-      <div class="wallet-info">
-        <div class="wallet-name">${wallet.name}</div>
-        <div class="wallet-status detected">✓ Detected · Ready to connect</div>
-      </div>
-      <div class="wallet-arrow">→</div>`;
+    btn.innerHTML = `<div class="wallet-icon"><img src="${wallet.iconUrl}" onerror="this.parentElement.innerHTML='◈'" alt="${wallet.name}"/></div><div class="wallet-info"><div class="wallet-name">${wallet.name}</div><div class="wallet-status detected">✓ Detected · Ready to connect</div></div><div class="wallet-arrow">→</div>`;
     btn.addEventListener('click', () => connectWith(wallet));
     return btn;
   }
@@ -436,14 +424,8 @@ window.addEventListener('load', () => {
   function buildInstallRow(wallet) {
     const btn = document.createElement('button');
     btn.className = 'wallet-option not-installed';
-    btn.innerHTML = `
-      <div class="wallet-icon"><img src="${wallet.iconUrl}" onerror="this.parentElement.innerHTML='◈'" alt="${wallet.name}"/></div>
-      <div class="wallet-info">
-        <div class="wallet-name">${wallet.name}</div>
-        <div class="wallet-status">Not installed · Click to install</div>
-      </div>
-      <div class="wallet-arrow">↗</div>`;
-    btn.addEventListener('click', () => window.open(wallet.installUrl, '_blank'));
+    btn.innerHTML = `<div class="wallet-icon"><img src="${wallet.iconUrl}" onerror="this.parentElement.innerHTML='◈'" alt="${wallet.name}"/></div><div class="wallet-info"><div class="wallet-name">${wallet.name}</div><div class="wallet-status">Not installed · Click to install</div></div><div class="wallet-arrow">↗</div>`;
+    btn.addEventListener('click', () => window.open(wallet.installUrl,'_blank'));
     return btn;
   }
 
@@ -465,7 +447,14 @@ window.addEventListener('load', () => {
     document.getElementById('app-section').classList.remove('hidden');
     document.getElementById('nav-wallet').classList.remove('hidden');
     document.getElementById('wallet-address').textContent = address.slice(0,4)+'...'+address.slice(-4);
-    analyzeWallet(address);
+
+    // Show chain badge in nav
+    const chainColors = { Solana:'chain-sol', Ethereum:'chain-eth', BSC:'chain-bsc', Polygon:'chain-polygon', Base:'chain-base' };
+    const badge = document.getElementById('nav-chain-badge');
+    badge.textContent = selectedChain;
+    badge.className = 'chain-badge ' + (chainColors[selectedChain]||'chain-sol');
+
+    analyzeWallet(address, selectedChain, selectedChainId);
   }
 
   document.getElementById('disconnect-btn').addEventListener('click', async () => {
@@ -503,15 +492,13 @@ window.addEventListener('load', () => {
 
   function resetLoadingSteps() {
     ['lstep1','lstep2','lstep3','lstep4'].forEach((id,i) => {
-      const el = document.getElementById(id);
-      el.className = 'lstep' + (i===0?' active':'');
+      document.getElementById(id).className = 'lstep'+(i===0?' active':'');
     });
   }
 
-  // expose for app.js
   window.activateLoadingStep = function(n) {
     ['lstep1','lstep2','lstep3','lstep4'].forEach((id,i) => {
-      document.getElementById(id).className = 'lstep' + (i<n?' done':i===n?' active':'');
+      document.getElementById(id).className = 'lstep'+(i<n?' done':i===n?' active':'');
     });
   };
 });
