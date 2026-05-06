@@ -314,7 +314,12 @@ window.addEventListener('load', () => {
       id:'phantom', name:'Phantom',
       iconUrl:'https://raw.githubusercontent.com/phantom-labs/phantom-brand/main/phantom-icon.png',
       detect:()=>!!(window.solana?.isPhantom),
-      connect: async()=>{ await window.solana.disconnect().catch(()=>{}); const r=await window.solana.connect({onlyIfTrusted:false}); return r.publicKey.toString(); },
+      connect: async()=>{
+        try { await window.solana.disconnect(); } catch(_){}
+        await new Promise(r=>setTimeout(r,300));
+        const r=await window.solana.connect({onlyIfTrusted:false});
+        return r.publicKey.toString();
+      },
       disconnect: async()=>{ try{await window.solana.disconnect();}catch(_){} }
     },
     {
