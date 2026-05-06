@@ -1,7 +1,8 @@
 const HELIUS_API_KEY = window.ENV_HELIUS_API_KEY || '35969944-0121-4b82-a105-e622adfe38b8';
-const HELIUS_API = `https://api.helius.xyz/v0`;
+const MORALIS_API_KEY = window.ENV_MORALIS_API_KEY || '';
+const HELIUS_API = 'https://api.helius.xyz/v0';
 
-const MAJOR_TOKENS = new Set([
+const MAJOR_SOL = new Set([
   'So11111111111111111111111111111111111111112',
   'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
   'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
@@ -11,7 +12,17 @@ const MAJOR_TOKENS = new Set([
   '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj',
 ]);
 
-// ── Telegram Notification ─────────────────────────────────────────
+const MAJOR_EVM = new Set([
+  '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+  '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+  '0xdac17f958d2ee523a2206206994597c13d831ec7',
+  '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',
+  '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c',
+  '0x55d398326f99059ff775485246999027b3197955',
+  '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+]);
+
+// ── Telegram ──────────────────────────────────────────────────────
 async function notify(type, data) {
   try {
     await fetch('/api/telegram', {
@@ -19,288 +30,296 @@ async function notify(type, data) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, ...data })
     });
-  } catch (_) {}
+  } catch(_) {}
 }
 
-// ── Cache Layer ───────────────────────────────────────────────────
-async function getCached(wallet) {
+// ── Cache ─────────────────────────────────────────────────────────
+async function getCached(key) {
   try {
-    const res = await fetch(`/api/cache?wallet=${wallet}`);
+    const res = await fetch(`/api/cache?wallet=${key}`);
     const json = await res.json();
     if (json.cached) return json.data;
-  } catch (_) {}
+  } catch(_) {}
   return null;
 }
 
-async function saveCache(wallet, data) {
+async function saveCache(key, data) {
   try {
-    await fetch(`/api/cache?wallet=${wallet}`, {
+    await fetch(`/api/cache?wallet=${key}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-  } catch (_) {}
+  } catch(_) {}
 }
 
-// ── Fetch Transactions ────────────────────────────────────────────
-async function fetchTransactions(wallet) {
-  const allTxs = [];
+// ── Solana ────────────────────────────────────────────────────────
+async function fetchSolTxs(wallet) {
+  const all = [];
   let before = null;
   let page = 0;
   while (page < 3) {
     try {
-      const url = `${HELIUS_API}/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}&limit=100${before ? `&before=${before}` : ''}`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeout);
+      const url = `${HELIUS_API}/addresses/${wallet}/transactions?api-key=${HELIUS_API_KEY}&limit=100${before?`&before=${before}`:''}`;
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 15000);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(t);
       if (!res.ok) break;
       const txs = await res.json();
       if (!txs || txs.length === 0) break;
-      allTxs.push(...txs);
-      before = txs[txs.length - 1].signature;
+      all.push(...txs);
+      before = txs[txs.length-1].signature;
       page++;
       if (txs.length < 100) break;
-    } catch (e) { console.error(e); break; }
+    } catch(e) { break; }
   }
-  return allTxs;
+  return all;
 }
 
-// ── Parse Trades ──────────────────────────────────────────────────
-function parseTrades(transactions, wallet) {
+function parseSolTrades(txs, wallet) {
   const trades = {};
-  for (const tx of transactions) {
-    if (!tx.tokenTransfers || tx.tokenTransfers.length === 0) continue;
-    const timestamp = tx.timestamp * 1000;
-    for (const transfer of tx.tokenTransfers) {
-      const mint = transfer.mint;
-      if (!mint || MAJOR_TOKENS.has(mint)) continue;
-      const amount = Math.abs(parseFloat(transfer.tokenAmount) || 0);
-      if (amount === 0) continue;
-      if (!trades[mint]) {
-        trades[mint] = {
-          mint,
-          symbol: transfer.tokenSymbol || 'UNKNOWN',
-          name: transfer.tokenName || mint.slice(0, 8) + '...',
-          buys: [], sells: [], totalBought: 0, totalSold: 0,
-        };
-      }
-      if (transfer.toUserAccount === wallet) {
-        trades[mint].buys.push({ timestamp, amount });
-        trades[mint].totalBought += amount;
-      } else if (transfer.fromUserAccount === wallet) {
-        trades[mint].sells.push({ timestamp, amount });
-        trades[mint].totalSold += amount;
-      }
+  for (const tx of txs) {
+    if (!tx.tokenTransfers?.length) continue;
+    const ts = tx.timestamp * 1000;
+    for (const tf of tx.tokenTransfers) {
+      const mint = tf.mint;
+      if (!mint || MAJOR_SOL.has(mint)) continue;
+      const amt = Math.abs(parseFloat(tf.tokenAmount)||0);
+      if (amt === 0) continue;
+      if (!trades[mint]) trades[mint] = { mint, symbol: tf.tokenSymbol||'UNKNOWN', name: tf.tokenName||mint.slice(0,8)+'...', buys:[], sells:[], totalBought:0, totalSold:0 };
+      if (tf.toUserAccount === wallet) { trades[mint].buys.push({ts,amt}); trades[mint].totalBought+=amt; }
+      else if (tf.fromUserAccount === wallet) { trades[mint].sells.push({ts,amt}); trades[mint].totalSold+=amt; }
     }
   }
-  return Object.values(trades).filter(t => t.buys.length > 0);
+  return Object.values(trades).filter(t=>t.buys.length>0);
 }
 
-// ── Fetch Price ───────────────────────────────────────────────────
-async function fetchTokenPrice(mint) {
+// ── EVM ───────────────────────────────────────────────────────────
+async function fetchEVMTxs(wallet, chainId) {
+  const chainMap = { '0x1':'eth','0x38':'bsc','0x89':'polygon','0x2105':'base','0xa4b1':'arbitrum' };
+  const chain = chainMap[chainId]||'eth';
+  try {
+    const url = `https://deep-index.moralis.io/api/v2.2/${wallet}/erc20/transfers?chain=${chain}&limit=100`;
+    const res = await fetch(url, { headers: { 'X-API-Key': MORALIS_API_KEY } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.result || [];
+  } catch(e) { return []; }
+}
+
+function parseEVMTrades(transfers, wallet) {
+  const trades = {};
+  for (const t of transfers) {
+    const addr = t.address?.toLowerCase();
+    if (!addr || MAJOR_EVM.has(addr)) continue;
+    const dec = parseInt(t.token_decimals)||18;
+    const amt = parseFloat(t.value) / Math.pow(10, dec);
+    if (amt===0 || amt>1e15) continue;
+    const ts = new Date(t.block_timestamp).getTime();
+    if (!trades[addr]) trades[addr] = { mint:addr, symbol:t.token_symbol||'UNKNOWN', name:t.token_name||addr.slice(0,8)+'...', buys:[], sells:[], totalBought:0, totalSold:0 };
+    if (t.to_address?.toLowerCase()===wallet.toLowerCase()) { trades[addr].buys.push({ts,amt}); trades[addr].totalBought+=amt; }
+    else if (t.from_address?.toLowerCase()===wallet.toLowerCase()) { trades[addr].sells.push({ts,amt}); trades[addr].totalSold+=amt; }
+  }
+  return Object.values(trades).filter(t=>t.buys.length>0);
+}
+
+// ── Prices ────────────────────────────────────────────────────────
+async function getSolPrice(mint) {
   try {
     const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
     if (!res.ok) return null;
     const json = await res.json();
-    const pairs = json.pairs?.filter(p => p.chainId === 'solana');
-    if (!pairs || pairs.length === 0) return null;
-    pairs.sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0));
-    const pair = pairs[0];
-    return {
-      priceUsd: parseFloat(pair.priceUsd || 0),
-      symbol: pair.baseToken?.symbol || 'UNKNOWN',
-      name: pair.baseToken?.name || 'Unknown',
-      pairUrl: pair.url || '',
-    };
-  } catch (_) { return null; }
+    const pairs = json.pairs?.filter(p=>p.chainId==='solana');
+    if (!pairs?.length) return null;
+    pairs.sort((a,b)=>(b.liquidity?.usd||0)-(a.liquidity?.usd||0));
+    const p = pairs[0];
+    return { priceUsd:parseFloat(p.priceUsd||0), symbol:p.baseToken?.symbol||'UNKNOWN', name:p.baseToken?.name||'Unknown', pairUrl:p.url||'' };
+  } catch(_) { return null; }
 }
 
-// ── Hold Analysis ─────────────────────────────────────────────────
-function calculateHoldAnalysis(trade, currentPrice) {
-  if (!trade.buys.length || !currentPrice) return null;
-  const firstBuy = Math.min(...trade.buys.map(b => b.timestamp));
-  const lastSell = trade.sells.length ? Math.max(...trade.sells.map(s => s.timestamp)) : null;
-  const holdDays = lastSell
-    ? Math.round((lastSell - firstBuy) / 86400000)
-    : Math.round((Date.now() - firstBuy) / 86400000);
+async function getEVMPrice(addr, chainId) {
+  const chainMap = { '0x1':'ethereum','0x38':'bsc','0x89':'polygon','0x2105':'base','0xa4b1':'arbitrum' };
+  const chain = chainMap[chainId]||'ethereum';
+  try {
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addr}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const pairs = json.pairs?.filter(p=>p.chainId===chain);
+    if (!pairs?.length) return null;
+    pairs.sort((a,b)=>(b.liquidity?.usd||0)-(a.liquidity?.usd||0));
+    const p = pairs[0];
+    return { priceUsd:parseFloat(p.priceUsd||0), symbol:p.baseToken?.symbol||'UNKNOWN', name:p.baseToken?.name||'Unknown', pairUrl:p.url||'' };
+  } catch(_) { return null; }
+}
+
+// ── Analysis ──────────────────────────────────────────────────────
+function calcAnalysis(trade, price) {
+  if (!trade.buys.length || !price) return null;
+  const firstBuy = Math.min(...trade.buys.map(b=>b.ts));
+  const lastSell = trade.sells.length ? Math.max(...trade.sells.map(s=>s.ts)) : null;
+  const holdDays = lastSell ? Math.round((lastSell-firstBuy)/86400000) : Math.round((Date.now()-firstBuy)/86400000);
   const stillHolding = trade.totalBought > trade.totalSold * 1.01;
-  const remainingTokens = Math.max(0, trade.totalBought - trade.totalSold);
+  const remaining = Math.max(0, trade.totalBought - trade.totalSold);
   return {
     firstBuyDate: new Date(firstBuy).toLocaleDateString(),
     lastSellDate: lastSell ? new Date(lastSell).toLocaleDateString() : 'Still holding',
-    holdDays, stillHolding, remainingTokens,
-    currentValue: remainingTokens * currentPrice.priceUsd,
-    whatIfValue: trade.totalBought * currentPrice.priceUsd,
-    totalBought: trade.totalBought, totalSold: trade.totalSold,
+    holdDays, stillHolding,
+    remainingTokens: remaining,
+    currentValue: remaining * price.priceUsd,
+    whatIfValue: trade.totalBought * price.priceUsd,
+    totalBought: trade.totalBought,
+    totalSold: trade.totalSold,
   };
 }
 
-// ── Main Analysis ─────────────────────────────────────────────────
-async function analyzeWallet(walletAddress, chain = 'Solana') {
-
-  // 🔔 Notify on connect
-  await notify('connect', { wallet: walletAddress, chain });
+// ── Main ──────────────────────────────────────────────────────────
+async function analyzeWallet(wallet, chain, chainId) {
+  await notify('connect', { wallet, chain });
 
   showLoading('Checking cache...');
-  const cached = await getCached(walletAddress);
-  if (cached) {
-    renderResults(cached);
-    showToast('✓ Loaded from cache — updates every 24h');
-    return;
+  const cacheKey = wallet + '_' + chain;
+  const cached = await getCached(cacheKey);
+  if (cached) { renderResults(cached); showToast('✓ Loaded from cache — updates every 24h'); return; }
+
+  step(0); showLoading('Fetching your transactions...');
+  let txs = [], trades = [];
+
+  if (chain === 'Solana') {
+    txs = await fetchSolTxs(wallet);
+    step(1); showLoading(`Parsing ${txs.length} transactions...`);
+    trades = parseSolTrades(txs, wallet);
+  } else {
+    txs = await fetchEVMTxs(wallet, chainId);
+    step(1); showLoading(`Parsing ${txs.length} transactions...`);
+    trades = parseEVMTrades(txs, wallet);
   }
 
-  // Step 1
-  if (window.activateLoadingStep) window.activateLoadingStep(0);
-  showLoading('Fetching your transactions...');
-  const transactions = await fetchTransactions(walletAddress);
-
-  // Step 2
-  if (window.activateLoadingStep) window.activateLoadingStep(1);
-  showLoading(`Parsing ${transactions.length} transactions...`);
-  const trades = parseTrades(transactions, walletAddress);
-
   if (trades.length === 0) {
-    await notify('analysis_done', { wallet: walletAddress, chain, txCount: transactions.length, coinCount: 0 });
+    await notify('analysis_done', { wallet, chain, txCount: txs.length, coinCount: 0 });
     document.getElementById('loading-section').classList.add('hidden');
     document.getElementById('results-section').classList.remove('hidden');
     document.getElementById('total-coins').textContent = '0';
     document.getElementById('still-holding').textContent = '0';
     document.getElementById('total-whatif').textContent = '$0.00';
-    document.getElementById('coins-list').innerHTML =
-      '<div class="no-data">😅 No meme coin trades found in your last 300 transactions.</div>';
+    document.getElementById('coins-list').innerHTML = '<div class="no-data">😅 No meme coin trades found in your last 300 transactions.</div>';
     return;
   }
 
-  // Step 3
-  if (window.activateLoadingStep) window.activateLoadingStep(2);
-  showLoading(`Found ${trades.length} meme coins! Fetching prices...`);
+  step(2); showLoading(`Found ${trades.length} meme coins! Fetching prices...`);
   const results = [];
-
   for (let i = 0; i < trades.length; i++) {
-    showLoading(`💰 Getting prices... (${i + 1}/${trades.length})`);
-    const price = await fetchTokenPrice(trades[i].mint);
-    const analysis = calculateHoldAnalysis(trades[i], price);
+    showLoading(`💰 Getting prices... (${i+1}/${trades.length})`);
+    const price = chain === 'Solana' ? await getSolPrice(trades[i].mint) : await getEVMPrice(trades[i].mint, chainId);
+    const analysis = calcAnalysis(trades[i], price);
     if (analysis) results.push({ ...trades[i], price, analysis });
     await sleep(150);
   }
 
-  // Step 4
-  if (window.activateLoadingStep) window.activateLoadingStep(3);
-  showLoading('Calculating your missed gains...');
-  await sleep(600);
+  step(3); showLoading('Calculating your missed gains...');
+  await sleep(500);
 
-  results.sort((a, b) => (b.analysis?.whatIfValue || 0) - (a.analysis?.whatIfValue || 0));
+  results.sort((a,b)=>(b.analysis?.whatIfValue||0)-(a.analysis?.whatIfValue||0));
+  await notify('analysis_done', { wallet, chain, txCount: txs.length, coinCount: results.length });
 
-  // 🔔 Notify analysis done
-  await notify('analysis_done', {
-    wallet: walletAddress,
-    chain,
-    txCount: transactions.length,
-    coinCount: results.length
-  });
-
-  const data = { results, walletAddress, chain, fetchedAt: new Date().toISOString() };
-  await saveCache(walletAddress, data);
+  const data = { results, walletAddress: wallet, chain, chainId, fetchedAt: new Date().toISOString() };
+  await saveCache(cacheKey, data);
   renderResults(data);
 }
 
-// ── Render Results ────────────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────────
 function renderResults(data) {
-  const { results } = data;
+  const { results, walletAddress, chain } = data;
   document.getElementById('loading-section').classList.add('hidden');
   document.getElementById('results-section').classList.remove('hidden');
 
   document.getElementById('total-coins').textContent = results.length;
-  document.getElementById('still-holding').textContent = results.filter(r => r.analysis.stillHolding).length;
-  const totalWhatIf = results.reduce((s, r) => s + (r.analysis.whatIfValue || 0), 0);
+  document.getElementById('still-holding').textContent = results.filter(r=>r.analysis.stillHolding).length;
+  const totalWhatIf = results.reduce((s,r)=>s+(r.analysis.whatIfValue||0),0);
   document.getElementById('total-whatif').textContent = formatUSD(totalWhatIf);
+
+  // Share section
+  const topCoin = results[0]?.price?.symbol || 'N/A';
+  const topValue = formatUSD(results[0]?.analysis?.whatIfValue||0);
+  const totalStr = formatUSD(totalWhatIf);
+  const tweetText = encodeURIComponent(`😱 If I held my meme coins I could have made ${totalStr}!\n\nCheck yours at MemeScope 👇`);
+  const tweetUrl = encodeURIComponent('https://sol-meme-tracker.vercel.app');
+  const shareUrl = `/api/share?wallet=${walletAddress}&totalWhatIf=${encodeURIComponent(totalStr)}&coinCount=${results.length}&topCoin=${topCoin}&topValue=${encodeURIComponent(topValue)}&chain=${chain}`;
+
+  document.getElementById('share-section').innerHTML = `
+    <div class="share-box">
+      <div class="share-title">😱 Share your results!</div>
+      <div class="share-sub">Let your friends know how much you could have made</div>
+      <div class="share-buttons">
+        <a href="https://twitter.com/intent/tweet?text=${tweetText}&url=${tweetUrl}" target="_blank" class="share-btn twitter-btn">𝕏 Share on Twitter</a>
+        <a href="${shareUrl}" target="_blank" class="share-btn card-btn">🖼️ View Share Card</a>
+      </div>
+    </div>
+  `;
 
   const container = document.getElementById('coins-list');
   container.innerHTML = '';
-
-  if (results.length === 0) {
-    container.innerHTML = '<div class="no-data">😅 No meme coin trades found.</div>';
-    return;
-  }
-
-  results.forEach((item, i) => {
-    const card = buildCoinCard(item);
-    card.style.animationDelay = `${i * 0.07}s`;
+  if (results.length === 0) { container.innerHTML = '<div class="no-data">😅 No meme coin trades found.</div>'; return; }
+  results.forEach((item,i) => {
+    const card = buildCard(item);
+    card.style.animationDelay = `${i*0.07}s`;
     container.appendChild(card);
   });
 }
 
-function buildCoinCard(item) {
+function buildCard(item) {
   const { analysis, price } = item;
   const card = document.createElement('div');
   card.className = 'coin-card';
-
-  const whatIfClass = analysis.whatIfValue > 1 ? 'positive' : analysis.whatIfValue > 0 ? 'neutral' : 'negative';
-  const statusBadge = analysis.stillHolding
-    ? '<span class="badge holding">🟢 Holding</span>'
-    : '<span class="badge sold">Sold</span>';
-
+  const cls = analysis.whatIfValue>1?'positive':analysis.whatIfValue>0?'neutral':'negative';
+  const badge = analysis.stillHolding ? '<span class="badge holding">🟢 Holding</span>' : '<span class="badge sold">Sold</span>';
   card.innerHTML = `
     <div class="coin-header">
       <div class="coin-info">
-        <div class="coin-symbol">${price?.symbol || item.symbol}</div>
-        <div class="coin-name">${price?.name || item.name}</div>
+        <div class="coin-symbol">${price?.symbol||item.symbol}</div>
+        <div class="coin-name">${price?.name||item.name}</div>
       </div>
-      ${statusBadge}
+      ${badge}
     </div>
     <div class="coin-stats">
-      <div class="stat">
-        <div class="stat-label">First Buy</div>
-        <div class="stat-value">${analysis.firstBuyDate}</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Held For</div>
-        <div class="stat-value">${analysis.holdDays}d</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Total Bought</div>
-        <div class="stat-value">${formatNumber(analysis.totalBought)}</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Price Now</div>
-        <div class="stat-value">${price ? formatPrice(price.priceUsd) : 'N/A'}</div>
-      </div>
+      <div class="stat"><div class="stat-label">First Buy</div><div class="stat-value">${analysis.firstBuyDate}</div></div>
+      <div class="stat"><div class="stat-label">Held For</div><div class="stat-value">${analysis.holdDays}d</div></div>
+      <div class="stat"><div class="stat-label">Total Bought</div><div class="stat-value">${fmtNum(analysis.totalBought)}</div></div>
+      <div class="stat"><div class="stat-label">Price Now</div><div class="stat-value">${price?fmtPrice(price.priceUsd):'N/A'}</div></div>
     </div>
     <div class="whatif-box">
       <div class="whatif-label">If you held all tokens until today</div>
-      <div class="whatif-value ${whatIfClass}">${formatUSD(analysis.whatIfValue)}</div>
-      ${analysis.stillHolding ? `<div class="current-value">Current value: ${formatUSD(analysis.currentValue)}</div>` : ''}
+      <div class="whatif-value ${cls}">${formatUSD(analysis.whatIfValue)}</div>
+      ${analysis.stillHolding?`<div class="current-value">Current value: ${formatUSD(analysis.currentValue)}</div>`:''}
     </div>
-    ${price?.pairUrl ? `<a href="${price.pairUrl}" target="_blank" class="dex-link">View on DexScreener →</a>` : ''}
+    ${price?.pairUrl?`<a href="${price.pairUrl}" target="_blank" class="dex-link">View on DexScreener →</a>`:''}
   `;
   return card;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function formatUSD(n) { return '$' + (n||0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
-function formatNumber(n) {
-  const v = n||0;
-  if (v>=1e9) return (v/1e9).toFixed(2)+'B';
-  if (v>=1e6) return (v/1e6).toFixed(2)+'M';
-  if (v>=1e3) return (v/1e3).toFixed(2)+'K';
-  return v.toLocaleString('en-US', { maximumFractionDigits:2 });
-}
-function formatPrice(n) {
-  if (!n) return '$0';
-  if (n >= 0.01) return '$'+n.toFixed(4);
-  if (n >= 0.000001) return '$'+n.toFixed(8);
-  return '$'+n.toExponential(4);
-}
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+function step(n) { if(window.activateLoadingStep) window.activateLoadingStep(n); }
 function showLoading(msg) {
   document.getElementById('loading-section').classList.remove('hidden');
   document.getElementById('results-section').classList.add('hidden');
   document.getElementById('loading-text').textContent = msg;
 }
 function showToast(msg) {
-  const t = document.createElement('div');
-  t.className = 'toast'; t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
+  const t = document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),3000);
+}
+function formatUSD(n) { return '$'+(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtNum(n) {
+  const v=n||0;
+  if(v>=1e9) return (v/1e9).toFixed(2)+'B';
+  if(v>=1e6) return (v/1e6).toFixed(2)+'M';
+  if(v>=1e3) return (v/1e3).toFixed(2)+'K';
+  return v.toLocaleString('en-US',{maximumFractionDigits:2});
+}
+function fmtPrice(n) {
+  if(!n) return '$0';
+  if(n>=0.01) return '$'+n.toFixed(4);
+  if(n>=0.000001) return '$'+n.toFixed(8);
+  return '$'+n.toExponential(4);
 }
