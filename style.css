@@ -707,3 +707,79 @@ nav {
   border-color: var(--border2); color: var(--white);
   background: rgba(79,122,255,0.1);
 }
+
+/* ── LEADERBOARD ── */
+.leaderboard-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  margin-bottom: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+.leaderboard-box::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--gold), var(--red), var(--purple));
+}
+
+.lb-header { margin-bottom: 20px; }
+.lb-title { font-size: 1.4rem; font-weight: 800; color: var(--white); letter-spacing: -0.02em; }
+.lb-sub { font-size: 0.82rem; color: var(--text2); margin-top: 4px; }
+.lb-your-rank {
+  display: inline-block;
+  margin-top: 8px;
+  background: rgba(79,122,255,0.1);
+  border: 1px solid var(--border2);
+  border-radius: 100px;
+  padding: 4px 14px;
+  font-size: 0.78rem;
+  color: var(--blue2);
+  font-weight: 600;
+}
+
+.lb-list { display: flex; flex-direction: column; gap: 8px; }
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.lb-row:hover { border-color: var(--border2); background: rgba(79,122,255,0.05); }
+
+.lb-you {
+  background: rgba(79,122,255,0.08) !important;
+  border-color: var(--border2) !important;
+}
+
+.lb-rank { font-size: 1.1rem; width: 32px; flex-shrink: 0; }
+.lb-wallet { font-size: 0.85rem; font-weight: 600; color: var(--text); flex: 1; font-family: 'DM Mono', monospace; }
+.lb-chain { font-size: 0.72rem; color: var(--text2); width: 70px; flex-shrink: 0; }
+.lb-value { font-size: 1rem; font-weight: 800; color: var(--green); text-align: right; min-width: 100px; }
+
+.you-badge {
+  display: inline-block;
+  background: var(--blue);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+}
+
+@media(max-width:768px) {
+  .lb-chain { display: none; }
+  .lb-row { gap: 10px; }
+}
