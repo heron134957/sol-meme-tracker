@@ -11,6 +11,18 @@ const MAJOR_TOKENS = new Set([
   '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj',
 ]);
 
+// ── Telegram Notification ─────────────────────────────────────────
+async function notify(type, data) {
+  try {
+    await fetch('/api/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, ...data })
+    });
+  } catch (_) {}
+}
+
+// ── Cache Layer ───────────────────────────────────────────────────
 async function getCached(wallet) {
   try {
     const res = await fetch(`/api/cache?wallet=${wallet}`);
@@ -30,6 +42,7 @@ async function saveCache(wallet, data) {
   } catch (_) {}
 }
 
+// ── Fetch Transactions ────────────────────────────────────────────
 async function fetchTransactions(wallet) {
   const allTxs = [];
   let before = null;
@@ -53,6 +66,7 @@ async function fetchTransactions(wallet) {
   return allTxs;
 }
 
+// ── Parse Trades ──────────────────────────────────────────────────
 function parseTrades(transactions, wallet) {
   const trades = {};
   for (const tx of transactions) {
@@ -83,6 +97,7 @@ function parseTrades(transactions, wallet) {
   return Object.values(trades).filter(t => t.buys.length > 0);
 }
 
+// ── Fetch Price ───────────────────────────────────────────────────
 async function fetchTokenPrice(mint) {
   try {
     const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
@@ -101,6 +116,7 @@ async function fetchTokenPrice(mint) {
   } catch (_) { return null; }
 }
 
+// ── Hold Analysis ─────────────────────────────────────────────────
 function calculateHoldAnalysis(trade, currentPrice) {
   if (!trade.buys.length || !currentPrice) return null;
   const firstBuy = Math.min(...trade.buys.map(b => b.timestamp));
@@ -120,9 +136,13 @@ function calculateHoldAnalysis(trade, currentPrice) {
   };
 }
 
-async function analyzeWallet(walletAddress) {
-  showLoading('Checking cache...');
+// ── Main Analysis ─────────────────────────────────────────────────
+async function analyzeWallet(walletAddress, chain = 'Solana') {
 
+  // 🔔 Notify on connect
+  await notify('connect', { wallet: walletAddress, chain });
+
+  showLoading('Checking cache...');
   const cached = await getCached(walletAddress);
   if (cached) {
     renderResults(cached);
@@ -141,6 +161,7 @@ async function analyzeWallet(walletAddress) {
   const trades = parseTrades(transactions, walletAddress);
 
   if (trades.length === 0) {
+    await notify('analysis_done', { wallet: walletAddress, chain, txCount: transactions.length, coinCount: 0 });
     document.getElementById('loading-section').classList.add('hidden');
     document.getElementById('results-section').classList.remove('hidden');
     document.getElementById('total-coins').textContent = '0';
@@ -170,11 +191,21 @@ async function analyzeWallet(walletAddress) {
   await sleep(600);
 
   results.sort((a, b) => (b.analysis?.whatIfValue || 0) - (a.analysis?.whatIfValue || 0));
-  const data = { results, walletAddress, fetchedAt: new Date().toISOString() };
+
+  // 🔔 Notify analysis done
+  await notify('analysis_done', {
+    wallet: walletAddress,
+    chain,
+    txCount: transactions.length,
+    coinCount: results.length
+  });
+
+  const data = { results, walletAddress, chain, fetchedAt: new Date().toISOString() };
   await saveCache(walletAddress, data);
   renderResults(data);
 }
 
+// ── Render Results ────────────────────────────────────────────────
 function renderResults(data) {
   const { results } = data;
   document.getElementById('loading-section').classList.add('hidden');
@@ -246,6 +277,7 @@ function buildCoinCard(item) {
   return card;
 }
 
+// ── Helpers ───────────────────────────────────────────────────────
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function formatUSD(n) { return '$' + (n||0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
 function formatNumber(n) {
