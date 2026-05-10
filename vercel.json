@@ -1,7 +1,13 @@
 {
+  "functions": {
+    "api/cache.js": { "runtime": "@vercel/node@3" },
+    "api/leaderboard.js": { "runtime": "@vercel/node@3" },
+    "api/telegram.js": { "runtime": "@vercel/node@3" },
+    "api/pump-alerts.js": { "runtime": "@vercel/node@3" },
+    "api/share.js": { "runtime": "@vercel/node@3" }
+  },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/leaderboard", "destination": "/leaderboard.html" },
     { "source": "/:path*", "destination": "/index.html" }
   ],
   "crons": [
