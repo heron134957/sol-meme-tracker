@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hall of Pain 🏆 — MemeScope Leaderboard</title>
+  <meta name="description" content="The biggest missed gains in crypto history. See who sold too early." />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .lb-page { max-width: 800px; margin: 0 auto; padding: 60px 32px 100px; position: relative; z-index: 1; }
+
+    .lb-hero { text-align: center; margin-bottom: 48px; }
+
+    .lb-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 100px; padding: 6px 18px;
+      font-size: 0.72rem; font-weight: 700; color: var(--gold);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .lb-hero-title {
+      font-size: clamp(2.5rem, 7vw, 4.5rem);
+      font-weight: 800; color: var(--white);
+      letter-spacing: -0.03em; line-height: 1.05;
+      margin-bottom: 16px;
+    }
+
+    .lb-hero-title span {
+      background: linear-gradient(135deg, #f59e0b, #ef4444, #8b5cf6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .lb-hero-sub { font-size: 1rem; color: var(--text2); max-width: 480px; margin: 0 auto 32px; line-height: 1.6; }
+
+    .lb-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      color: #fff; text-decoration: none;
+      border-radius: 12px; padding: 12px 24px;
+      font-size: 0.9rem; font-weight: 700;
+      transition: all 0.2s;
+      box-shadow: 0 0 30px rgba(79,122,255,0.3);
+    }
+    .lb-cta:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(79,122,255,0.5); }
+
+    .lb-stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px; margin-bottom: 40px;
+    }
+
+    .lb-stat {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px; text-align: center;
+    }
+
+    .lb-stat-val {
+      font-size: 1.8rem; font-weight: 800; color: var(--white);
+      letter-spacing: -0.02em;
+    }
+
+    .lb-stat-label { font-size: 0.7rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; font-weight: 600; }
+
+    .lb-table {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; overflow: hidden;
+      position: relative;
+    }
+
+    .lb-table::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--gold), var(--red), var(--purple), var(--blue));
+    }
+
+    .lb-table-header {
+      display: grid; grid-template-columns: 60px 1fr 80px 100px 130px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.65rem; font-weight: 700; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+
+    .lb-entry {
+      display: grid; grid-template-columns: 60px 1fr 80px 100px 130px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      transition: all 0.2s;
+      animation: fadeup 0.4s ease both;
+    }
+
+    .lb-entry:last-child { border-bottom: none; }
+    .lb-entry:hover { background: rgba(79,122,255,0.04); }
+
+    .lb-entry.top3 { background: rgba(245,158,11,0.04); }
+    .lb-entry.top1 { background: rgba(245,158,11,0.08); }
+
+    .rank-num {
+      font-size: 1.1rem; font-weight: 800;
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    .rank-1 { color: #f59e0b; }
+    .rank-2 { color: #9ca3af; }
+    .rank-3 { color: #cd7f32; }
+    .rank-other { color: var(--text2); font-size: 0.9rem; }
+
+    .entry-wallet {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem; font-weight: 600; color: var(--text);
+    }
+
+    .entry-chain {
+      font-size: 0.72rem; color: var(--text2);
+    }
+
+    .entry-coins {
+      font-size: 0.85rem; font-weight: 600; color: var(--text2); text-align: center;
+    }
+
+    .entry-value {
+      font-size: 1rem; font-weight: 800; color: var(--green);
+      text-align: right;
+      text-shadow: 0 0 20px rgba(16,217,160,0.3);
+    }
+
+    .top1 .entry-value { color: var(--gold); text-shadow: 0 0 20px rgba(245,158,11,0.4); }
+    .top2 .entry-value { color: #9ca3af; }
+    .top3 .entry-value { color: #cd7f32; }
+
+    .lb-empty {
+      text-align: center; padding: 80px 40px;
+      color: var(--text2); font-size: 0.95rem;
+    }
+
+    .lb-loading {
+      text-align: center; padding: 80px 40px;
+      color: var(--text2);
+    }
+
+    .lb-loading .loader-ring { margin: 0 auto 20px; }
+
+    .refresh-btn {
+      display: flex; align-items: center; gap: 8px;
+      background: none; border: 1px solid var(--border);
+      color: var(--text2); border-radius: 10px;
+      padding: 8px 16px; font-size: 0.8rem;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      cursor: pointer; transition: all 0.2s; margin-left: auto;
+    }
+    .refresh-btn:hover { border-color: var(--border2); color: var(--white); }
+
+    .lb-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .lb-toolbar-title {
+      font-size: 0.72rem; font-weight: 700; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .live-indicator {
+      width: 6px; height: 6px; background: var(--green);
+      border-radius: 50%; animation: pulse 2s infinite;
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    .pain-meter {
+      margin-bottom: 40px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px 24px;
+      display: flex; align-items: center; gap: 20px;
+    }
+
+    .pain-emoji { font-size: 2.5rem; }
+
+    .pain-text { flex: 1; }
+    .pain-title { font-size: 1rem; font-weight: 700; color: var(--white); }
+    .pain-sub { font-size: 0.82rem; color: var(--text2); margin-top: 3px; }
+
+    .pain-bar-wrap { flex: 1; }
+    .pain-bar-bg { height: 8px; background: var(--bg3); border-radius: 100px; overflow: hidden; }
+    .pain-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), var(--gold), var(--red));
+      border-radius: 100px;
+      transition: width 1s ease;
+    }
+
+    @media(max-width:640px) {
+      .lb-table-header, .lb-entry { grid-template-columns: 48px 1fr 110px; }
+      .entry-chain, .entry-coins { display: none; }
+      .lb-stats-row { grid-template-columns: 1fr 1fr; }
+      .lb-page { padding: 40px 16px 80px; }
+    }
+  </style>
+</head>
+<body>
+<canvas id="particles"></canvas>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="logo" style="text-decoration:none">
+      <div class="logo-mark">
+        <span class="logo-ring"></span>
+        <span class="logo-dollar">$</span>
+      </div>
+      <span class="logo-text">Meme<em>Scope</em></span>
+    </a>
+    <div style="display:flex;gap:12px;align-items:center">
+      <a href="/leaderboard" style="color:var(--gold);font-size:0.85rem;font-weight:700;text-decoration:none">🏆 Leaderboard</a>
+      <a href="/" class="lb-cta" style="padding:8px 18px;font-size:0.82rem">Connect Wallet →</a>
+    </div>
+  </div>
+</nav>
+
+<div class="lb-page">
+
+  <div class="lb-hero">
+    <div class="lb-eyebrow">🏆 Hall of Pain</div>
+    <h1 class="lb-hero-title">
+      The Biggest<br/>
+      <span>Missed Gains</span><br/>
+      in Crypto
+    </h1>
+    <p class="lb-hero-sub">
+      These wallets sold their meme coins too early. How much did they leave on the table? Find out where you rank.
+    </p>
+    <a href="/" class="lb-cta">⚡ Check Your Wallet →</a>
+  </div>
+
+  <!-- Stats row -->
+  <div class="lb-stats-row" id="stats-row">
+    <div class="lb-stat">
+      <div class="lb-stat-val" id="stat-wallets">—</div>
+      <div class="lb-stat-label">Wallets Analyzed</div>
+    </div>
+    <div class="lb-stat">
+      <div class="lb-stat-val" id="stat-total" style="color:var(--green)">—</div>
+      <div class="lb-stat-label">Total Missed Gains</div>
+    </div>
+    <div class="lb-stat">
+      <div class="lb-stat-val" id="stat-top" style="color:var(--gold)">—</div>
+      <div class="lb-stat-label">Biggest Single Miss</div>
+    </div>
+  </div>
+
+  <!-- Pain meter -->
+  <div class="pain-meter" id="pain-meter" style="display:none">
+    <div class="pain-emoji" id="pain-emoji">😐</div>
+    <div class="pain-text">
+      <div class="pain-title" id="pain-title">Community Pain Level</div>
+      <div class="pain-sub" id="pain-sub">Calculating...</div>
+    </div>
+    <div class="pain-bar-wrap">
+      <div class="pain-bar-bg">
+        <div class="pain-bar-fill" id="pain-bar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="lb-toolbar">
+    <div class="lb-toolbar-title">
+      <div class="live-indicator"></div>
+      Live Rankings
+    </div>
+    <button class="refresh-btn" id="refresh-btn">↻ Refresh</button>
+  </div>
+
+  <div class="lb-table" id="lb-table">
+    <div class="lb-loading">
+      <div class="loader-ring"></div>
+      <div>Loading Hall of Pain...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Particles
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+const particles = Array.from({length:50}, () => ({
+  x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight,
+  r: Math.random()*1.2+0.3, dx: (Math.random()-0.5)*0.25, dy: (Math.random()-0.5)*0.25,
+  o: Math.random()*0.3+0.05
+}));
+function animateParticles() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for (const p of particles) {
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(99,130,255,${p.o})`; ctx.fill();
+    p.x+=p.dx; p.y+=p.dy;
+    if(p.x<0||p.x>canvas.width) p.dx*=-1;
+    if(p.y<0||p.y>canvas.height) p.dy*=-1;
+  }
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// Format helpers
+function fmtUSD(n) { return '$'+(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtShort(n) {
+  if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M';
+  if(n>=1e3) return '$'+(n/1e3).toFixed(1)+'K';
+  return fmtUSD(n);
+}
+
+function getRankDisplay(i) {
+  if(i===0) return '<span class="rank-num rank-1">🥇</span>';
+  if(i===1) return '<span class="rank-num rank-2">🥈</span>';
+  if(i===2) return '<span class="rank-num rank-3">🥉</span>';
+  return `<span class="rank-num rank-other">#${i+1}</span>`;
+}
+
+function getPainLevel(avgMiss) {
+  if(avgMiss >= 100000) return { emoji:'💀', title:'CATASTROPHIC PAIN', sub:'The community is in agony', pct:100 };
+  if(avgMiss >= 50000) return { emoji:'😭', title:'EXTREME PAIN', sub:'Tears on every keyboard', pct:85 };
+  if(avgMiss >= 10000) return { emoji:'😱', title:'HIGH PAIN', sub:'Paper hands everywhere', pct:65 };
+  if(avgMiss >= 1000) return { emoji:'😬', title:'MODERATE PAIN', sub:'Could have been worse...', pct:40 };
+  return { emoji:'😐', title:'LOW PAIN', sub:'Not bad actually', pct:20 };
+}
+
+async function loadLeaderboard() {
+  const table = document.getElementById('lb-table');
+  table.innerHTML = '<div class="lb-loading"><div class="loader-ring"></div><div>Loading Hall of Pain...</div></div>';
+
+  try {
+    const res = await fetch('/api/leaderboard');
+    const json = await res.json();
+    const data = json.data || [];
+
+    if (data.length === 0) {
+      table.innerHTML = '<div class="lb-empty">😅 No entries yet — be the first to connect your wallet!</div>';
+      return;
+    }
+
+    // Update stats
+    const totalMissed = data.reduce((s,d) => s+(d.whatif_value||0), 0);
+    const topMiss = data[0]?.whatif_value || 0;
+    const avgMiss = totalMissed / data.length;
+
+    document.getElementById('stat-wallets').textContent = data.length;
+    document.getElementById('stat-total').textContent = fmtShort(totalMissed);
+    document.getElementById('stat-top').textContent = fmtShort(topMiss);
+
+    // Pain meter
+    const pain = getPainLevel(avgMiss);
+    const painMeter = document.getElementById('pain-meter');
+    painMeter.style.display = 'flex';
+    document.getElementById('pain-emoji').textContent = pain.emoji;
+    document.getElementById('pain-title').textContent = pain.title;
+    document.getElementById('pain-sub').textContent = pain.sub;
+    setTimeout(() => {
+      document.getElementById('pain-bar').style.width = pain.pct + '%';
+    }, 300);
+
+    // Build table
+    const chainEmojis = { Solana:'◎', Ethereum:'⟠', BSC:'🟡', Polygon:'⬟', Base:'🔵' };
+
+    table.innerHTML = `
+      <div class="lb-table-header">
+        <div>Rank</div>
+        <div>Wallet</div>
+        <div>Chain</div>
+        <div style="text-align:center">Coins</div>
+        <div style="text-align:right">Missed Gains</div>
+      </div>
+      ${data.map((entry, i) => {
+        const short = entry.wallet_address.slice(0,4)+'...'+entry.wallet_address.slice(-4);
+        const chainEmoji = chainEmojis[entry.chain] || '🌐';
+        const rowClass = i===0?'lb-entry top1 top3':i===1?'lb-entry top2 top3':i===2?'lb-entry top3':'lb-entry';
+        return `
+          <div class="${rowClass}" style="animation-delay:${i*0.05}s">
+            <div>${getRankDisplay(i)}</div>
+            <div class="entry-wallet">${short}</div>
+            <div class="entry-chain">${chainEmoji} ${entry.chain}</div>
+            <div class="entry-coins">${entry.coin_count || 0}</div>
+            <div class="entry-value">${fmtUSD(entry.whatif_value)}</div>
+          </div>
+        `;
+      }).join('')}
+    `;
+
+  } catch(err) {
+    table.innerHTML = '<div class="lb-empty">❌ Failed to load leaderboard. Try refreshing.</div>';
+  }
+}
+
+document.getElementById('refresh-btn').addEventListener('click', loadLeaderboard);
+loadLeaderboard();
+</script>
+</body>
+</html>
