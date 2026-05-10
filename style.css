@@ -783,3 +783,22 @@ nav {
   .lb-chain { display: none; }
   .lb-row { gap: 10px; }
 }
+
+/* ── NAV LEADERBOARD LINK ── */
+.nav-lb-link {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--gold);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(245,158,11,0.25);
+  background: rgba(245,158,11,0.08);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.nav-lb-link:hover {
+  background: rgba(245,158,11,0.15);
+  border-color: rgba(245,158,11,0.4);
+  transform: translateY(-1px);
+}
